@@ -1,0 +1,29 @@
+{
+  "skill_name": "mac-disk-hygiene",
+  "evals": [
+    {
+      "id": 0,
+      "name": "macos-update-blocked-by-space",
+      "prompt": "ugh my macbook says i don't have enough space to install the macOS update, i think i need like 20gb free and i'm nowhere close. it's a 256gb machine. can you figure out what's eating everything and help me clear some out? i do a lot of dev work (react native / expo, some node stuff).",
+      "expected_output": "Runs the read-only scanner first, presents a ranked tiered plan of the biggest reclaimable items (Docker image, caches, simulators, etc.) with sizes and safe reclaim commands, totals up easy wins, and offers to clean tier-by-tier with confirmation rather than deleting blindly. Should surface that a chunk of used space is system-level (needs sudo).",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 1,
+      "name": "vague-disk-full-symptom",
+      "prompt": "my mac is basically full again, the storage bar in settings is all red. what's taking up all my space?",
+      "expected_output": "Triggers the skill from the symptom alone, runs the scanner, and reports what's actually consuming space (drilling into hidden parents like Containers/dotdirs, not just top-level du). Distinguishes purgeable space and explains the df-vs-actual gotcha if relevant. Does not start deleting without being asked.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "name": "targeted-dev-cache-cleanup",
+      "prompt": "i want to clean up all the developer junk on my mac — old xcode derived data, simulators i don't use, npm/brew caches, that kind of thing. don't touch anything risky though, i've broken my setup before doing this.",
+      "expected_output": "Scans, then proposes only the safe regenerable dev caches (DerivedData, unavailable simulators via simctl, npm/brew cache clean) using app-native commands, explicitly keeping risky items (app data, archives that may be needed) out of scope. Confirms before deleting and honors the user's caution.",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}
