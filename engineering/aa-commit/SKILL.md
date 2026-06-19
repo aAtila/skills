@@ -5,9 +5,8 @@ description: Use whenever the user asks to commit, save changes, prepare a commi
 
 # Commit
 
-This skill stops at the clipboard on purpose. The user wants a chance to review the message and paste it themselves before the commit lands. Two siblings cover adjacent jobs:
+This skill stops at the clipboard on purpose. The user wants a chance to review the message and paste it themselves before the commit lands. A sibling covers an adjacent job:
 
-- **`aa-commit-direct`** — same workflow, but commits directly without the clipboard step. Manual invocation only.
 - **`aa-commit-clarity`** — advisory only. Use first when the diff feels mixed, to decide whether the changes belong in one commit or several.
 
 ## Workflow
