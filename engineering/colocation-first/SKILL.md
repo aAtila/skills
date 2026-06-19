@@ -5,59 +5,44 @@ description: How to place, name, and organize files and modules in this codebase
 
 # Colocation First
 
-This is the **operational layer** for placing, naming, and organizing code. It tells you when to apply the rules and the calls you must get right in the moment.
+One rule, applied before you write or place any code: **code that changes together lives together.** Before you create a file, name it, split a growing one, or pick a folder, ask: *when this feature changes, how many places must I understand and edit?* Drive that number toward **one**.
 
-> **Canonical reference: [`references/route-owned-modules.md`](references/route-owned-modules.md)** is the single source of truth — full naming conventions, types-file rules, the worked premium-ads example, and the reasoning behind every rule. When a detail isn't spelled out here, read the doc. Term definitions (module, interface, seam, adapter, module interface file, barrel, promotion, …) live in [`references/glossary.md`](references/glossary.md).
-
-## The belief everything serves
-
-**Code that changes together lives together.** Colocation is the highest-leverage structural decision we make. The question is never "is this clean?" but:
-
-> When this feature changes, how many places must I understand and edit?
-
-Optimize for that number being **one**.
+> Full naming tables, types-file rules, the worked premium-ads example, and the reasoning behind every rule live in [`references/route-owned-modules.md`](references/route-owned-modules.md) — the single source of truth. Read it when a detail isn't spelled out here. Term definitions (module, interface, seam, adapter, barrel, promotion, …) live in [`references/glossary.md`](references/glossary.md).
 
 ## Where does this code go?
 
-1. **Owned by one route?** → Keep it under the route, behind **one** private, domain-named folder (the search route → `_search/`). This is the common case.
-2. **Used by two or more routes today?** → Promote to `src/modules/<domain>/`. Present reuse, not hypothetical. A cross-route need is a **promotion signal** — never reach into another route's private folder to satisfy it.
-3. **Technical adapter / plumbing** (transport, third-party wrapper, no domain meaning)? → `src/lib/<thing>/` if shared, else the owning module's `internal/`.
+Decide in this order:
 
-Don't optimize for a small route tree. Pushing behavior into `src/modules` just to tidy `app/` destroys locality — now understanding the route means hopping away from it. A noisy route folder is fixed by a private `_<domain>/` subfolder, not by exile.
+1. **One route owns it** (the common case) → keep it under the route, behind **one** private, domain-named folder (search route → `_search/`).
+2. **Two or more routes use it today** → promote to `src/modules/<domain>/`. Present reuse only, never hypothetical. A cross-route need is the promotion signal — never reach into another route's private folder to satisfy it.
+3. **Plumbing** (transport, third-party wrapper, no domain meaning) → `src/lib/<thing>/` if shared, else the owning module's `internal/`.
 
-## Organize by concept, not technical kind
+Never exile route code to `src/modules` just to slim down `app/`. Understanding the route then means hopping away from it. A noisy route folder is fixed with a private `_<domain>/` subfolder, not by moving behavior away from what it serves.
 
-Group files by the concept that changes together (`premium-ads/`, `search-results/`, `map-search/`), not by `_components/`, `_services/`, `_hooks/`, `_model/`. And don't just push those technical buckets one level deeper (`_search/components/`, `_search/services/`) — that's the same shallow split hidden under a new folder.
+## Name and group for the domain
 
-## Module interface files (the public surface)
+- **Group by the concept that changes together** (`premium-ads/`, `search-results/`, `map-search/`) — never by technical kind (`_components/`, `_services/`, `_hooks/`, `_model/`), and never those same buckets pushed one level deeper (`_search/components/`).
+- **Name domain-first:** `<domain-concept>[-specific-behavior][.<role>].ts`. Add a role suffix only when it carries real meaning: `.types.ts`, `.actions.ts`, `.server.ts` (pair with `import 'server-only';`), `.client.ts`, `.test.ts`, `-adapter.server.ts` / `-adapter.client.ts`.
+- **Ban vague suffixes** — `.utils`, `.helpers`, `.service`, `.domain` — they hide ownership. Name the behavior instead: `select-premium-search-ads.ts`, not `premium.utils.ts`.
 
-A **module interface file** is a domain-named file outside callers may import directly because it represents a stable capability. "Public" means public to the surrounding route/module, not to the whole app. It should: have a domain name, own behavior or invariants, let callers depend on it without learning its internals, export a small intentional surface, and survive internal refactors without forcing caller changes.
+## Public surface and privacy
 
-Privacy is positional: files at a module's root are public; files in `internal/` are private; nothing imports another module's `internal/`. **Don't create `internal/` by default** — a single interface file with private functions is often enough; reach for `internal/` only when there are enough hidden files to justify the structure.
+A **module interface file** is a domain-named file callers may import directly because it represents a stable capability — "public" to its route/module, not the whole app. It owns behavior or invariants, exposes a small intentional surface, and survives internal refactors without forcing caller changes.
 
-## No barrel files
+Privacy is positional: root files are public, `internal/` files are private, and nothing imports another module's `internal/`. **Don't create `internal/` by default** — a single interface file with private functions is usually enough; reach for it only when enough hidden files justify the structure.
 
-No `index.ts`. No `export *`. Import directly from the interface file — it keeps jump-to-file fast, keeps seams honest, and avoids dragging client code into a server graph through a careless re-export. A central module file (e.g. `search.ts`) is allowed **only if it owns real behavior** (orchestration, invariants, composition) — never as a re-export hub.
+**No barrels.** No `index.ts`, no `export *`. Import directly from the interface file — it keeps jump-to-file fast, seams honest, and client code out of the server graph. A central file (`search.ts`) is allowed **only if it owns real behavior** (orchestration, composition, invariants), never as a re-export hub.
 
-## Name for the domain first
+## Earn every folder and seam
 
-Pattern: `<domain-concept>[-specific-behavior][.<role>].ts`. Role suffixes are used only when they carry real meaning: `.types.ts` (shared module contract types), `.actions.ts` (Server Actions), `.server.ts` (server-only, pair with `import 'server-only';`), `.client.ts`, `.test.ts`, `-adapter.server.ts` / `-adapter.client.ts`. Avoid vague suffixes — `.utils.ts`, `.helpers.ts`, `.service.ts`, `.domain.ts` — which hide unclear ownership; name the behavior instead (`select-premium-search-ads.ts`, `map-premium-search-ad.ts`). Full naming and types-file rules live in the doc.
+Start flat — a module can be a single file. Add a folder or seam only when it gives callers a **smaller interface** *and* maintainers **better locality**. **Deletion test:** if removing the feature would mostly delete one folder, the folder earns its keep. If a structure only moves complexity around, drop it. Don't extract for a second caller, a deeper bucket, or a future that hasn't arrived yet.
 
-## Folder or flat file?
+## Before you commit a placement
 
-A module can be a single file. Create a folder only when the concept has enough implementation to earn locality. Use the **deletion test**: if removing the feature should mostly delete one folder, the folder is earning its keep. Don't extract upfront — start flat, promote when the complexity is real.
-
-## A route-owned module is a behavior-hiding module, not a folder pattern
-
-The folder shape earns its place only when it gives callers a smaller interface and maintainers better locality. If a folder or seam only moves complexity around, drop it.
-
-## Checklist before you place or name a file
-
-- Does it live next to what owns it? Route-owned → under the route in `_<domain>/`.
-- Grouped by concept — not `components/`/`services/`/`hooks/`, and not those buckets pushed one level down?
-- Does the name say what it owns, domain-first, with a meaningful role suffix only if it helps?
-- Implementation detail → in `internal/` (and only when enough files justify it)?
-- About to write `index.ts` or `export *`? Don't.
-- Extracting to `src/modules` for one caller? Don't — wait for the second route.
-- New folder for a sub-feature? Does the deletion test actually justify it?
-- Need the full detail (naming tables, types files, premium-ads shape, rationale)? Read [`references/route-owned-modules.md`](references/route-owned-modules.md).
+- Lives next to its owner? Route-owned → `_<domain>/` under the route.
+- Grouped by concept — not technical kind, nor those buckets pushed one level down?
+- Name says what it owns, domain-first, with a role suffix only if it helps?
+- About to write `index.ts` or `export *`? Stop.
+- Extracting to `src/modules` for one caller? Stop — wait for the second route.
+- New folder or `internal/`? Does the deletion test actually justify it yet?
+- Need the tables, types-file rules, premium-ads shape, or rationale? → [`references/route-owned-modules.md`](references/route-owned-modules.md).
