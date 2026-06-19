@@ -1,16 +1,16 @@
 ---
 name: aa-pr-message
-description: Use whenever the user is about to open, draft, or describe a pull request — phrasings like "what should the title and message of this PR be", "PR title and message", "write a PR description", "open a PR", "I'm about to open a PR", "ready for PR", "PR copy", "PR body", or "merge this branch to main". Reads the branch's commit messages (and the diff shape when needed), groups changes thematically, and produces a PR title and a markdown PR body the user can paste straight into `gh pr create` or the GitHub UI. Stops at the clipboard — does not push or open the PR.
+description: Drafts a PR/MR title and markdown body from a branch's commits — for the user to review and paste into `gh pr create`, `glab mr create`, or the web UI. Stops at the clipboard; never pushes or opens the PR/MR. Use when the user wants PR copy: a title and/or description for a branch they're about to open. Sibling of `aa-commit`/`aa-commit-clarity`.
 ---
 
 # PR Message
 
-This skill stops at the clipboard on purpose. The user wants to read the title and body before pasting them into `gh pr create` or GitHub. Two siblings cover the adjacent jobs:
+This skill stops at the clipboard on purpose. The user wants to read the title and body before pasting them into a PR (GitHub) or merge request (GitLab) — via `gh`, `glab`, or the web UI. ("PR" throughout means either; the job is identical.) Two siblings cover the adjacent jobs:
 
 - **`aa-commit`** — generates the message for a single commit and copies it to the clipboard.
 - **`aa-commit-clarity`** — advisory only. Use first when a branch contains genuinely separable concerns and you want to think about whether it should be one PR or several before drafting the body.
 
-The body of a PR is a different artifact than a commit message. A commit explains one change; a PR explains a branch — usually multiple commits — to a human reviewer who has not been living inside it. The job here is reviewer comprehension, not change logging.
+The body of a PR is a different artifact than a commit message. A commit explains one change; a PR explains a branch — usually multiple commits — to a human reviewer who has not been living inside it. **The diff shows the *what*; the body supplies the *why*.** That principle drives every choice below — the job is reviewer comprehension, not change logging.
 
 **Where the signal lives.** In a well-maintained branch the commit messages already are the human-readable summary of what changed and why — the author wrote them while context was fresh. Treat them as the primary source. The diff is a fallback for cases where the commit messages are thin, the branch is one big WIP commit, or you need to verify a specific claim. Don't burn tokens re-deriving the story from raw hunks when the author already wrote it down.
 
@@ -27,13 +27,12 @@ Three quick checks before drafting:
 
 2. **Confirm we have a branch to PR.** If `git rev-parse --abbrev-ref HEAD` returns the base, stop and tell Atila — there's nothing to PR.
 
-3. **Check for a PR template.** This shapes the body's sections, so it has to happen *before* you draft anything. Look for any of:
-   - `.github/pull_request_template.md` (and case variants `PULL_REQUEST_TEMPLATE.md`)
-   - `.github/PULL_REQUEST_TEMPLATE/` — a directory of multiple templates (pick the one that fits, or ask)
-   - `docs/pull_request_template.md`
-   - `pull_request_template.md` at repo root
+3. **Check for a PR/MR template.** This shapes the body's sections, so it has to happen *before* you draft anything. Look for any of:
+   - GitHub: `.github/pull_request_template.md` (and case variant `PULL_REQUEST_TEMPLATE.md`), or `.github/PULL_REQUEST_TEMPLATE/` — a directory of multiple templates (pick the one that fits, or ask)
+   - GitLab: `.gitlab/merge_request_templates/*.md` — a directory; the filename is the template name (e.g. `Default.md`). Pick the fitting one, or ask.
+   - `docs/pull_request_template.md` or `pull_request_template.md` at repo root
 
-   One-liner: `find . -maxdepth 3 -iname 'pull_request_template*' -not -path './node_modules/*' 2>/dev/null`. If a template exists, use its section headings in Step 4 instead of inventing your own. Fill in only the sections that genuinely have content — leave a section blank rather than fabricating filler.
+   One-liner: `find . -maxdepth 3 \( -iname '*request_template*' -o -ipath '*/merge_request_templates/*' -o -ipath '*/pull_request_template/*' \) -not -path './node_modules/*' 2>/dev/null`. If a template exists, use its section headings in Step 4 instead of inventing your own. Fill in only the sections that genuinely have content — leave a section blank rather than fabricating filler.
 
 ### Step 1: Read the branch — commit messages first
 
@@ -80,7 +79,7 @@ There are intentional reasons to bundle (end-of-sprint cleanup, related-but-sepa
 The title is the single most-read line in the PR. Rules:
 
 - Short, imperative, no trailing period.
-- Match the repo's recent merged PR style — sample with `gh pr list --state merged --limit 8 --json title` if `gh` is available and authed. Some repos use conventional-commit prefixes (`feat(scope): …`), some use plain imperative ("Add JWT refresh flow"). Match what's already there.
+- Match the repo's recent merged PR/MR style — sample with `gh pr list --state merged --limit 8 --json title` (on GitLab: `glab mr list --merged`) if the CLI is available and authed. Some repos use conventional-commit prefixes (`feat(scope): …`), some use plain imperative ("Add JWT refresh flow"). Match what's already there.
 - Conventional-commit scope at the PR level is fine but **not required**. PR titles are read by humans skimming a PR list, not by a changelog generator.
 - If the branch is one commit, the PR title is usually that commit's subject. Don't reinvent it.
 - If the branch is many commits serving one theme, name the theme. Don't list the commits.
@@ -115,7 +114,7 @@ If a PR template exists (Step 0), use its sections. Otherwise this template is a
 Rules:
 
 - **Group by theme, not by file.** "Adds `useDeviceId` hook" beats "modifies `src/lib/device/use-device-id.ts`". The diff already lists the files.
-- **Explain why, not what.** The diff shows what. The body's job is to give the reviewer enough context to evaluate whether the what is the right what.
+- **The diff shows the *what*; the body supplies the *why*.** Give the reviewer enough context to evaluate whether the what is the *right* what.
 - **No attribution footers.** No `Co-Authored-By`, no `Generated with…`, no `🤖`. The PR author is the human pushing it.
 - **Don't enumerate every commit.** Reviewers can click "Commits" if they want that. The body is the human summary.
 
@@ -165,12 +164,16 @@ EOF
 pbcopy < /tmp/pr-body.md
 ```
 
-(On Linux: `xclip -selection clipboard < /tmp/pr-body.md` or `wl-copy < /tmp/pr-body.md`. On Windows: `clip < /tmp/pr-body.md`. If no clipboard utility is available, just leave the file in place and tell Atila where it is.)
+(No clipboard utility available? Just leave the file in place and tell Atila where it is.)
 
-Print the title and body to the chat too, so Atila can grab either independently. Suggest the file-based `gh` invocation as primary — it survives any body content:
+Print the title and body to the chat too, so Atila can grab either independently. Suggest the file-based invocation as primary — it survives any body content:
 
 ```sh
+# GitHub
 gh pr create --title "<title>" --body-file /tmp/pr-body.md
+
+# GitLab — no file flag, but quoted command-substitution is safe even with backticks/$ in the body
+glab mr create --title "<title>" --description "$(cat /tmp/pr-body.md)"
 ```
 
 The clipboard form (`gh pr create --title "<title>" --body "$(pbpaste)"`) is fine as a fallback for short bodies without quotes or backticks, but don't recommend it for bodies that contain code blocks.
@@ -183,9 +186,4 @@ git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null
 
 If that command fails (no upstream configured), mention it — *"Branch isn't pushed yet — `git push -u origin <branch>` first."* — but don't run `git push` yourself. Atila pushes on his own terms.
 
-## What this skill does NOT do
-
-- Does not run `gh pr create`. Atila pastes it himself.
-- Does not push the branch. If the branch has no upstream, mention it — but let Atila run `git push` on his own terms.
-- Does not amend, rebase, squash, or reword commits. The branch is what it is; the skill describes it.
-- Does not block on cohesion concerns. It surfaces them once and moves on.
+One boundary not covered above: this skill **describes** the branch, it doesn't reshape it — no amend, rebase, squash, or reword. The branch is what it is.
