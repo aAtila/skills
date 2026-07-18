@@ -1,21 +1,21 @@
 ---
 name: test-review
-description: Use when the user asks to review or audit existing tests, questions whether tests are any good, suspects a flaky or vacuous/smoke test, asks what test cases are missing, or wants a test-quality and coverage-gap check before a refactor or on brownfield / AI- / teammate-authored tests. Read-only — surfaces bad-test smells and coverage gaps as findings and hands gaps to tdd. NOT tdd (writes tests test-first), NOT qa-plan (manual acceptance from intent), NOT legacy-seams (writes characterization pins), NOT aa-second-opinion (general diff review).
+description: Use when the user asks to review or audit existing tests, questions whether tests are any good, suspects a flaky or vacuous/smoke test, asks what test cases are missing, or wants a test-quality and coverage-gap check before a refactor or on brownfield / AI- / teammate-authored tests. Read-only — exposes false greens (bad tests that pass for the wrong reasons) and coverage gaps as findings, hands gaps to tdd. NOT tdd (writes tests test-first), NOT qa-plan (manual acceptance from intent), NOT aa-second-opinion (general diff review).
 disable-model-invocation: true
 ---
 
 # Test Review
 
-Judge an existing test suite against one standard: a good test pins observable behaviour through the public interface. You **reveal** — bad tests and missing cases become findings; you never write a test. Each coverage gap is a job for `tdd`, driven out one at a time. Code you just TDD'd is the weak target; this earns its keep on tests you _didn't_ write — brownfield, AI-authored, teammate, or rotted suites, and before a refactor you need to trust the suite behind.
+Judge an existing test suite against one standard: a good test pins observable behaviour through the public interface. The enemy is the **false green** — a suite that passes for the wrong reasons, hiding rot behind a wall of green: tests that assert nothing, tests welded to the implementation, tests that never ran the branch that matters. You **expose** the false green as findings; you never write the fix. Each coverage gap is a job for `tdd`, driven out one at a time. Code you just TDD'd is the weak target; this earns its keep on tests you _didn't_ write — brownfield, AI-authored, teammate, or rotted suites, and before a refactor you need to trust the green behind you.
 
 ## Pipeline position
 
 Read-only, dual-home:
 
 - **VERIFY** — audit teammate- or AI-authored tests before merge, beside `qa-plan` / `aa-second-opinion`.
-- **MAINTAIN** — sweep a brownfield or rotted suite, beside `improve-*` / `hotspot-analysis`.
+- **MAINTAIN** — sweep a brownfield or rotted suite; a churn hotspot's tests are suspect.
 
-Feeds `tdd` (gaps → red-green). Supplies the trust check upstream of `legacy-seams` / `refactor-catalog` — are these tests good enough to refactor behind? Receives hotspot / `improve` signals: a churn hotspot's tests are suspect.
+Feeds `tdd`: each coverage gap becomes a red-green cycle. Supplies the trust check upstream of any refactor — are these tests good enough to change the code behind them?
 
 ## Scope
 
@@ -30,11 +30,11 @@ If none is given, ask which. Audit that target's blast radius, not the whole rep
 
 - **G1 — Behaviour, not coverage %.** Every finding names a behaviour a caller cares about. "Line 42 is uncovered" is not a finding; "the empty-cart path has no test and ships a crash" is.
 - **G2 — Grounded in evidence.** A quality finding cites the test and the smell. A coverage gap gives `input → expected`, grounded in a real branch, guard, or spec — never a generic "test your error handling".
-- **G3 — Reveal, never write.** Findings only. Each gap hands to `tdd` for one-at-a-time red-green. Emit zero tests — batching missing tests after the fact is the horizontal-slicing anti-pattern `tdd` exists to prevent.
+- **G3 — Expose, never write.** Findings only. Each gap hands to `tdd` for one-at-a-time red-green. Emit zero tests — batching missing tests after the fact is the horizontal-slicing anti-pattern `tdd` exists to prevent.
 
 ## The method
 
-Two passes over the target. See [references/detection-heuristics.md](references/detection-heuristics.md) for the full smell catalogue, static flaky signals, and coverage heuristics.
+Two passes hunt the false green from both sides: Pass 1 finds green that asserts nothing; Pass 2 finds the behaviour the green never ran. See [references/detection-heuristics.md](references/detection-heuristics.md) for the full smell catalogue, static flaky signals, and coverage heuristics.
 
 ### Pass 1 — Quality (existing tests)
 
@@ -76,14 +76,13 @@ A clean suite is a valid result. Don't manufacture findings to look thorough.
 
 **Rejected by a gate.** "Add tests to cover these 12 uncovered lines." Refused by **G1** — no behaviour named. Reframed only for the lines that map to a real behaviour (the expiry branch); a logging line and a defensive `?.` stay uncovered on purpose.
 
-**Wrong skill.** "Write the tests for me" → `tdd`. "Walk me through QA-ing this" → `qa-plan`. "Pin this legacy behaviour before I change it" → `legacy-seams`. "Review the whole PR, not just tests" → `aa-second-opinion`.
+**Wrong skill.** "Write the tests for me" → `tdd`. "Walk me through QA-ing this" → `qa-plan`. "Review the whole PR, not just tests" → `aa-second-opinion`.
 
 ## Boundaries
 
 | Want to…                          | Use                                | Relationship                                               |
 | --------------------------------- | ---------------------------------- | ---------------------------------------------------------- |
 | Write tests test-first            | `tdd`                              | It writes; this judges and feeds it gaps.                  |
-| Pin legacy behaviour to change it | `legacy-seams`                     | It writes characterization pins; this checks the suite.    |
 | A manual acceptance walkthrough   | `qa-plan`                          | Intent-first, human-run; this is code-contract, static.    |
 | Review non-test code too          | `aa-second-opinion` / `autoreview` | General diff review; this is the test lens.                |
 | Cut over-engineered code          | `aa-simplify`                      | Removal-biased; shares the read-cold, findings-only shape. |
