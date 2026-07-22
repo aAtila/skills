@@ -1,13 +1,13 @@
 ---
 name: tidy-first
-description: Make the change easy, then make the easy change — Kent Beck's tidy-first. Run as the zero step before coding a picked issue: prepare ONLY the code that makes THIS imminent change easier, on green, in a commit separate from the behavioral change. Use when you've picked an issue and are about to touch code, want to prefactor before a feature, or another skill (tdd, implement) needs the landing zone prepared. NOT a codebase-wide cleanup sweep (improve-codebase-architecture / improve-codebase-colocation), NOT splitting code you already mixed (aa-commit-clarity).
+description: Make the change easy, then make the easy change — Kent Beck's tidy-first: prepare the landing zone for one imminent change. Use when you've picked an issue and are about to touch code (prefactoring), or when another skill (tdd, implement) needs the landing zone prepared. NOT a codebase-wide cleanup sweep (improve-*).
 ---
 
 # Tidy First
 
 > **Make the change easy, then make the easy change.** — Kent Beck
 
-Prepare the landing zone for a single imminent change, then make the change. The structural prep and the behavioral change are **two separate acts, two separate commits** — never one tangle. This skill owns that sequencing and separation at the moment you're about to code; it does not hunt the codebase for cleanup (that's the `improve-*` sweep).
+Prepare the landing zone for a single imminent change, then make the change. The structural prep and the behavioral change are **two separate acts, two separate commits** — never one tangle.
 
 Per issue, as the **zero step of implementation**:
 
@@ -19,7 +19,7 @@ pick issue → context_builder (blast radius + direction) → tidy-first → tdd
 
 A candidate tidying may only be done if it passes **both**:
 
-1. **Change-scope gate** — tidy *only what makes THIS change easier*. Not about to touch that code for this issue? You don't tidy it, no matter how messy. A tidy with no behavioral change waiting behind it is a **sweep**.
+1. **Change-scope gate** — tidy *only what makes THIS change easier*. Not about to touch that code for this issue? You don't tidy it, no matter how messy — paying now for an option on an uncertain future change rarely covers its cost. A tidy with no behavioral change waiting behind it is a **sweep**.
 2. **Direction gate** — tidy *only what is stable across your chosen approach*. If approach A and approach B would tidy different things, your direction isn't locked — resolve the fork (`grill-me` or a spike) first.
 
 A candidate that fails either gate is **dropped** — but make the decision *explicit*: file it now if it's actionable and worth tracking (route to `improve-*` or the tracker), or consciously let it go. Never leave it as invisible "later" — that's how a codebase accrues chronic under-tidying.
@@ -28,7 +28,6 @@ A candidate that fails either gate is **dropped** — but make the decision *exp
 
 - **Suite red?** Get it green first. On a failing suite you can't tell a behavior-preserving move from a behavior-changing one — the one thing this skill keeps separate.
 - **No tests on the blast radius?** Then "green" is meaningless. Write a characterization test to pin current behavior, or limit yourself to mechanical, tool-verified moves (IDE rename/extract) that preserve behavior by construction.
-- **Tidying for an issue you haven't started is speculative** — paying now for an option on an uncertain future change rarely covers its cost. Don't.
 
 ## Process
 
@@ -36,7 +35,7 @@ A candidate that fails either gate is **dropped** — but make the decision *exp
 
 **1. Curate the blast radius with `context_builder`** in **clarify** mode (or a directional `question`) — surface the files, functions, and seams this lands on, plus enough direction to judge the direction gate. **Not `plan` mode**: a line-level plan built against messy code bakes in the hard version of the change and defeats the skill. Directional thinking belongs here; the detailed steps emerge later, from the now-easier code. Fall back to `file_search` + `read_file` only when `context_builder` is unavailable or the change lands in one function you can already see whole.
 
-**2. Find candidate tidyings inside the blast radius** — small, behavior-preserving legibility moves only. Run each through both gates; keep the survivors.
+**2. Find candidate tidyings inside the blast radius** — small, behavior-preserving legibility moves only. Run each through both gates; keep the survivors. Done when **every file in the blast radius has been read against this catalog** — not when you have "some" candidates.
 
    - **Guard clauses** — flatten nested conditionals into early returns
    - **Dead code** — delete unreached branches, unused params, stale flags
@@ -48,11 +47,11 @@ A candidate that fails either gate is **dropped** — but make the decision *exp
    - **Chunk statements** — blank-line a long run into labelled paragraphs
    - **Delete redundant comments** — when a rename or extract made them noise
 
-**3. Present the shortlist — and stop.** Each item gets one line: *why it makes THIS change easier* (not "cleaner"). Can't articulate that link? It fails the change-scope gate. Fifteen candidates is a sweep — keep it short. **This shortlist is the skill's primary output. Do not edit yet.**
+**3. Present the shortlist — and stop.** Each item gets one line: *why it makes THIS change easier* (not "cleaner"). Can't articulate that link? It fails the change-scope gate. Fifteen candidates is a sweep. **This shortlist is the skill's primary output. Do not edit yet.**
 
 **4. Apply now, or hand off — the user's call.**
    - **Execute now.** Behavior must not change: same inputs, outputs, side effects. Run the existing tests/checks after tidying to confirm, then commit the tidy **in its own commit, separate from the behavioral change** — so a reviewer can read structure and behavior independently and revert either alone (squashing at the PR boundary is fine; the discipline is in how you author it, not the merge artifact). Continue to step 5.
-   - **Hand off.** Don't touch code. Use `handoff` to capture the one-sentence change, the curated blast radius, and the approved shortlist (each item with its rationale and the green-only / own-commit / run-tests discipline) for a fresh session to execute. The skill ends here.
+   - **Hand off.** Don't touch code. Use `handoff` to capture the one-sentence change, the curated blast radius, and the approved shortlist (each item with its rationale, plus the execute discipline above) for a fresh session to execute. The skill ends here.
 
 **5. Hand off to `tdd`** (only if you executed). Say: *"Structural prep committed separately — the change is now easy. Starting TDD."* Then make the easy change through red → green → refactor.
 
