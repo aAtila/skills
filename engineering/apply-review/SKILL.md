@@ -1,6 +1,7 @@
 ---
 name: apply-review
-description: Use when the user hands back a code review to act on — "here's a review from X, apply what makes sense", "review from Codex/Fable/Oracle, take what's worth it", "address these PR comments", "apply the feedback", or when pasting review findings after implementing something. Triages each finding on its merits against the actual implementation, applies what holds up, and defends what doesn't. Not blind compliance.
+description: Act on a code review that came back from any reviewer — another agent, the Oracle, a human PR comment. Triages each finding against the actual implementation, applies what holds up, and defends what doesn't, with rejections required to cite a concrete fact rather than a preference. Explicit invocation only.
+disable-model-invocation: true
 ---
 
 # Apply Review
