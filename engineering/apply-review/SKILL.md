@@ -18,7 +18,12 @@ Works with any reviewer — another agent, the Oracle, Codex, a human PR comment
 
 Reviewer credibility does **not** factor into triage. A finding from a senior human and a finding from a subagent get the same test. Judge the claim, not the claimant.
 
-If you did not write the code under review, say so before starting — you don't have the implementer's context and your rejections carry much less weight. Prefer `apply` or `defer` in that case.
+What matters for triage is not whether you typed the code but whether you can reach the context behind it:
+
+- **You wrote it, or you orchestrated it** (delegated to subagents but held the plan and made the design calls) — you own the *reasons*, which is exactly what the rejection rule tests. Judge at full weight. If a rejection turns on a detail you delegated away and don't hold, recover it: re-query the subagent that wrote it, or read the code. Don't reflexively `defer` just because your own hands didn't touch the keys — an orchestrator often holds more context than the reviewer, not less.
+- **You're coming in cold** — someone else's code, no memory of why the decisions were made, no subagent to ask. Then your rejections carry little weight; say so up front and lean toward `apply` or `defer`.
+
+Do not let "a subagent did the implementation" collapse you into the cold case. That is the most common way this skill quietly reverts to compliance.
 
 ## Method
 
