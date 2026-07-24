@@ -1,11 +1,11 @@
 ---
 name: aa-commit
-description: Use whenever the user asks to commit, save changes, prepare a commit, wrap up work, or finish up a chunk of code — even if they don't say the word "commit" explicitly. Formats code if a formatter is configured, generates a conventional commit message, stages files, and copies the message to the clipboard so the user can review and paste it before committing.
+description: Use whenever the user asks to commit, save changes, prepare a commit, wrap up work, or finish up a chunk of code — even if they don't say the word "commit" explicitly. Formats code if a formatter is configured, generates a conventional commit message, stages the relevant files, and commits — unless the user says not to commit, in which case it stops at the staged message for review.
 ---
 
 # Commit
 
-This skill stops at the clipboard on purpose. The user wants a chance to review the message and paste it themselves before the commit lands. A sibling covers an adjacent job:
+This skill commits by default. Generate the message, stage the right files, and land the commit — unless the user has said they don't want it committed this time, in which case stop after staging and show them the message to run themselves. Either way, always print the full commit message in your response. A sibling covers an adjacent job:
 
 - **`aa-commit-clarity`** — advisory only. Use first when the diff feels mixed, to decide whether the changes belong in one commit or several.
 
@@ -72,19 +72,22 @@ EOF
 )"
 ```
 
-(For this skill the user does the actual commit themselves, but the message you generate should be HEREDOC-ready.)
-
-### Step 3: Stage and copy
+### Step 3: Stage and commit
 
 Stage the files that belong to this commit (don't use `git add -A` — be specific so secrets and unrelated edits don't slip in).
 
-Then copy the commit message to the clipboard using whatever's available on the platform:
+Then commit, using the HEREDOC form so newlines survive shell quoting:
 
-- macOS: `pbcopy`
-- Linux: `xclip -selection clipboard` or `wl-copy` (Wayland)
-- Windows: `clip`
+```sh
+git commit -m "$(cat <<'EOF'
+<your message here>
+EOF
+)"
+```
 
-Tell the user the message is on their clipboard, ready to paste into `git commit -m "$(pbpaste)"` (or however they prefer).
+If the user said they don't want it committed this time, stop after staging and hand them the ready-to-run command instead.
+
+Either way, print the full commit message in your response so the user always sees exactly what landed (or what's queued).
 
 ## Comment Guidelines
 
