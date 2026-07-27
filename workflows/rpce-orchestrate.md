@@ -129,7 +129,7 @@ If the task is naturally **1 item**, dispatch it directly and skip the rest of t
 
 For multi-item work, dispatch a **fresh agent per item**. The plan file provides continuity — each agent reads it first, sees what's already done, and reasons with a clean context budget.
 
-The pattern is a **verify-then-dispatch-fresh loop**:
+The pattern is the **fresh-agent loop**:
 
 1. **Dispatch** the first work item with a self-contained brief + plan reference.
 2. **Wait** for the agent to finish.
@@ -265,7 +265,7 @@ Then pass `session_ids` (array) to `agent_run op=wait` to block until the **firs
 {"tool":"agent_run","args":{"op":"poll","session_ids":["<session_id_A>","<session_id_B>"]}}
 ```
 
-Handle the finished agent, then wait again on the remaining `pending_session_ids`. While waiting, summarize completed work or prepare the next brief — be a pipeline, not a sequential loop.
+Handle the finished agent, then wait again on the remaining `pending_session_ids`. Work as a **pipeline**: while one agent runs, summarize completed work or prepare the next brief.
 
 ### Housekeeping
 
