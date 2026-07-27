@@ -47,6 +47,8 @@ Then:
 }
 ```
 
+When the task involves writing code, append one line to `instructions`: _"For each work item, name the public seam its tests should be written against."_ Phase 2 needs a seam per item, so it's cheapest to have the plan produce them.
+
 If you can't disambiguate from a quick scan, dispatch a narrow explore agent first:
 
 ```json
@@ -113,6 +115,7 @@ For each item, note:
 - **Goal**: What this item accomplishes (1-2 sentences)
 - **Done when**: Concrete completion criteria — what should be true when this item is finished
 - **Key files/modules**: Where the work happens
+- **Seam**: The public boundary this item's tests are written against — the interface where behaviour is observable without reaching inside. You name it; the sub-agent doesn't get to pick (see _TDD and seams_ in Phase 3).
 - **Dependencies**: Which other items must complete first, if any
 - **Size**: Small (focused change) or large (multi-file, architectural)
 
@@ -230,6 +233,20 @@ You can always steer additional work later, or spin up a separate agent for the 
 
 **Two conversations, kept separate.** You hold one conversation with the user (preferences, course corrections, meta-instructions about how _you_ should behave) and a separate one with each peer agent (purely the technical task). When the user steers you, translate the actionable parts into the next brief — never forward their words verbatim, and never narrate what the user told you about your own conduct. If a brief you already dispatched carried that kind of commentary, cancel it and re-send clean.
 
+### TDD and seams
+
+Implementation is test-first. Any brief that builds code carries two extra lines:
+
+> Follow the `tdd` skill (installed globally under `~/.agents/skills/tdd`) — load it before you start.
+> Build at this seam: `<seam from the plan>`. That seam is already confirmed — don't go hunting for a user to agree it. If it looks wrong, stop and tell me rather than choosing another one.
+
+Two details make this hold:
+
+- **Name the skill, don't assume it's already loaded.** Sub-agents start clean; the skill only enters the session if the brief calls for it. If an agent reports back with no tests, check it actually resolved `tdd` before blaming the instruction.
+- **You are the seam authority.** The skill says to confirm seams with the user, and there is no user inside a dispatched session. You confirmed the seam when you wrote it into the plan — the brief must say so, or the agent stalls or invents one.
+
+The rest of the skill (vertical slices, red before green, no refactoring inside the loop) needs nothing from you — it's self-contained once the seam is fixed.
+
 ### Parallel dispatch
 
 If dispatching independent items as fresh agents concurrently, **each agent's brief must mention the sibling**:
@@ -343,6 +360,7 @@ After all items complete, give the user a **final rollup**:
 - 🚫 Dispatching parallel agents to overlapping files without warning them about each other
 - 🚫 Waiting idle for an agent when you could be dispatching the next independent item or preparing the next brief
 - 🚫 Forgetting to check on dispatched agents — they may block on permission approvals; poll periodically to keep them unblocked
+- 🚫 Dispatching an implementation item with no seam named — the agent invents one, and the tests end up welded to whatever it happened to build
 - 🚫 Creating 5 work items when the task is naturally 2 — decompose to the right granularity, not a target number
 - 🚫 Repeating project conventions from CLAUDE.md in dispatch briefs — the agents will read those themselves
 - 🚫 Forwarding user-to-orchestrator commentary (preferences, criticisms, meta-instructions about how you should operate) into a peer-agent brief — translate the actionable parts into the technical task and keep the rest between you and the user
