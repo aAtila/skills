@@ -27,8 +27,6 @@ Shortcuts:
 - **User provided a plan file** → read it, skip straight to Phase 2.
 - **Still ambiguous after 2 calls** → dispatch a narrow explore agent with one specific question.
 
-Keep this light — builder handles the deep reading.
-
 ```json
 {"tool":"get_file_tree","args":{"type":"files","mode":"auto"}}
 {"tool":"file_search","args":{"pattern":"<key term>","mode":"path"}}
@@ -121,7 +119,7 @@ For each item, note:
 
 Most tasks decompose into **2-3 items** — that's the sweet spot. If you're reaching for 4-5, consider whether some items can be combined. If you're beyond 5, you're decomposing too finely — raise the abstraction level.
 
-If the task naturally decomposes into **1 item**, skip the orchestration overhead — just dispatch it directly. Don't create ceremony for simple work.
+If the task is naturally **1 item**, dispatch it directly and skip the rest of this workflow.
 
 ---
 
@@ -135,11 +133,11 @@ The pattern is a **verify-then-dispatch-fresh loop**:
 
 1. **Dispatch** the first work item with a self-contained brief + plan reference.
 2. **Wait** for the agent to finish.
-3. **Verify** against the plan — did it meet the "done when" criteria from Phase 2? A quick scan of the agent's output and, if needed, a lightweight `file_search` or `read_file` on key deliverables catches drift before it compounds.
+3. **Verify** against the plan's "done when" criteria — the mechanics are Phase 4.
 4. **Update the plan file** to record progress so the next agent sees current state.
 5. **Dispatch the next item fresh**, referencing the updated plan.
 
-Do **not** fire-and-forget the full list. Catching drift early — before the next agent builds on a flawed foundation — is your value as the orchestrator.
+Verify each item before the next dispatch. Catching drift before the next agent builds on a flawed foundation is your value as the orchestrator.
 
 ```json
 // 1. Dispatch item 1 as a fresh agent
@@ -223,8 +221,6 @@ The agents you dispatch are fully capable — they have tools, they'll read AGEN
 - **Point to a section for broader tasks**: Reference the plan path in the `message` and tell the agent which part to focus on (e.g. "Read the plan at <path> with read_file first. Your job is item 2 in the plan. Items 1 and 3 are handled separately.").
 - **State the boundary**: "Do only X. Stop when X is done." is more effective than hoping the agent infers scope from context.
 
-You can always steer additional work later, or spin up a separate agent for the next item.
-
 **Include:** The goal, relevant file paths/modules, and discoveries from planning that the agent wouldn't find on its own. If a separate user plan file exists, point to the relevant section. For small tasks, tell the agent to skip oracle review.
 
 **Don't include:** Project conventions already in CLAUDE.md, step-by-step instructions, or code snippets the agent can read itself.
@@ -238,7 +234,7 @@ You can always steer additional work later, or spin up a separate agent for the 
 Implementation is test-first. Any brief that builds code carries two extra lines:
 
 > Follow the `tdd` skill (installed globally under `~/.agents/skills/tdd`) — load it before you start.
-> Build at this seam: `<seam from the plan>`. That seam is already confirmed — don't go hunting for a user to agree it. If it looks wrong, stop and tell me rather than choosing another one.
+> Build at this seam: `<seam from the plan>`. It's already confirmed — treat it as settled. If it looks wrong, stop and tell me rather than choosing another one.
 
 Two details make this hold:
 
@@ -251,7 +247,7 @@ The rest of the skill (vertical slices, red before green, no refactoring inside 
 
 If dispatching independent items as fresh agents concurrently, **each agent's brief must mention the sibling**:
 
-> "Another agent is concurrently working on <brief description of sibling task> in <modules>. Avoid modifying files in that area. If you find yourself blocked by or conflicting with that work, stop and report back rather than pushing through."
+> "Another agent is concurrently working on <brief description of sibling task> in <modules>. Keep your edits outside those modules. If you find yourself blocked by or conflicting with that work, stop and report back rather than pushing through."
 
 **Use `detach: true`** when dispatching concurrent items — otherwise the orchestrator blocks on the first agent and can't start the second.
 
@@ -304,8 +300,8 @@ You own the plan. It's your job to ensure each phase respected it.
 
 As each agent completes:
 
-1. **Verify against the plan.** Check the agent's output against the "done when" criteria from the plan. Don't just skim — confirm the goal was actually met. A quick `read_file` or `file_search` on key deliverables costs little and catches drift before it compounds. If the plan said "add error handling to all three endpoints" and the agent only touched two, that's your catch. Mark the item as done (or note gaps) in the export file so you have a running record.
-2. **If something's off**, steer a correction before moving on — never proceed with unresolved gaps:
+1. **Verify against the plan.** Check the agent's output against the "done when" criteria and confirm the goal was actually met. A quick `read_file` or `file_search` on key deliverables costs little and catches drift before it compounds. If the plan said "add error handling to all three endpoints" and the agent only touched two, that's your catch. Mark the item as done (or note gaps) in the export file so you have a running record.
+2. **If something's off**, steer a correction before dispatching anything else:
 
 ```json
 {
@@ -320,6 +316,10 @@ As each agent completes:
 ```
 
 3. **Summarize to the user**: Brief status update — what completed, what's still running.
+
+Dispatched agents can block waiting on a permission approval, which looks identical to an agent that's simply thinking. Poll periodically so a stall surfaces as a stall.
+
+Sub-agents surface coordination problems to you rather than solving them unilaterally — you're the one with the full picture, so an escalation is a working handoff, not a failure.
 
 After all items complete, give the user a **final rollup**:
 
@@ -342,25 +342,3 @@ After all items complete, give the user a **final rollup**:
 | Read plan/context                 | `read_file`, `get_file_tree`, `file_search`                                             |
 | Reason with oracle                | `ask_oracle` — requires file selection from `context_builder`                           |
 
----
-
-## Key Principles
-
-- **You are the coordinator, not the implementer.** Read to verify sub-agent work, not to build your own mental model. Keep your context focused on coordination.
-- **Trust the agents.** They're smart, they have tools, they read project instructions. Give them goals and reference points, not turn-by-turn directions.
-- **Be strategic about parallelism.** Independent items can run concurrently, but always warn agents about siblings working in adjacent areas.
-- **Graceful scaling.** 1 item = just dispatch it. 2-3 items = straightforward. 4-5 items = be deliberate about dependencies and parallelism.
-- **Escalation point.** You're the one with the full picture. Sub-agents should surface coordination problems to you rather than solving them unilaterally.
-
-## Anti-patterns
-
-- 🚫 Implementing code yourself — you're the orchestrator, dispatch an agent
-- 🚫 Extended code reading before delegating — a quick skim is fine; deep reads belong in builder or explore agents
-- 🚫 Writing detailed step-by-step instructions for dispatched agents — they can reason for themselves
-- 🚫 Dispatching parallel agents to overlapping files without warning them about each other
-- 🚫 Waiting idle for an agent when you could be dispatching the next independent item or preparing the next brief
-- 🚫 Forgetting to check on dispatched agents — they may block on permission approvals; poll periodically to keep them unblocked
-- 🚫 Dispatching an implementation item with no seam named — the agent invents one, and the tests end up welded to whatever it happened to build
-- 🚫 Creating 5 work items when the task is naturally 2 — decompose to the right granularity, not a target number
-- 🚫 Repeating project conventions from CLAUDE.md in dispatch briefs — the agents will read those themselves
-- 🚫 Forwarding user-to-orchestrator commentary (preferences, criticisms, meta-instructions about how you should operate) into a peer-agent brief — translate the actionable parts into the technical task and keep the rest between you and the user
