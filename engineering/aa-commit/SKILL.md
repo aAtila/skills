@@ -29,6 +29,8 @@ Run `git diff` and `git status` to understand everything staged and unstaged.
 
 Before staging, scan for files that probably shouldn't be committed: `.env*`, `credentials.json`, `*.key`, `*.pem`, `*.p12`, secret-looking paths, large binaries, build artifacts. If any are present and unignored, surface them to the user and confirm before including them.
 
+Leave planning, review, critique, and investigation docs out of the commit — plans, design docs, review reports, analysis write-ups, research and debugging notes. Include them only when the user explicitly asks for them in this commit. If you leave any out, say so in one line.
+
 After the secrets scan, do a quick read of the diff for commit cohesion: does this span multiple independent concerns? Common signals — a refactor mixed with an unrelated behaviour change, formatting noise mixed with semantic edits, an obvious bugfix tucked into a feature commit, two changes that just happen to be sitting in your working tree together. If you spot a mix, pause before generating the message and surface a one-liner:
 
 > "This diff looks like it might benefit from `aa-commit-clarity` before I write the message. Want me to run it, or just commit as-is?"
