@@ -24,6 +24,28 @@ This workflow is delegation-heavy. Explore agents map seams and pull external re
 - **Ground every user question in something you found.** Generic interview questions waste the user's time.
 - **Honor the involvement promise.** Once the user has picked **Up front** or **Mid-flow**, every downstream `ask_user` is a checkpoint they asked for. If one returns `timed_out: true`, **halt** — don't proceed with assumed answers and silently break the promise. Resume from the same prompt when the user replies. (Phase 1 itself is exempt: a timeout on the involvement-mode question means "no signal yet," and the documented Hands-off default applies.) `skipped: true` is always an explicit user choice and falls back to documented defaults.
 
+## Phase 0: Name the Session (REQUIRED — first action)
+
+Before anything else, call `set_status` to name this session using the standard convention:
+
+```
+PLAN #<issue>: <short title>
+```
+
+- **`PLAN`** — always uppercase, always first, so plan sessions sort and scan together.
+- **`#<issue>`** — the issue/ticket number when the request names one (e.g. `#123`, from `$ARGUMENTS`, a linked URL, a branch name, or a plan/issue file). **Omit the `#<issue>` segment entirely if there is no issue number** — don't invent one, don't write `#TBD`.
+- **`<short title>`** — a few words in the codebase's own terms, not a restatement of the whole request.
+
+```json
+{"tool":"set_status","args":{"session_name":"PLAN #123: retry logic in NetworkService"}}
+```
+
+With no issue number: `PLAN: retry logic in NetworkService`.
+
+Set this once, up front, before any exploration or delegation. Don't rename mid-run unless the scope genuinely changes — a stable name is what makes the session list readable later.
+
+---
+
 ## Phase 1: User Involvement Decision (REQUIRED — first interactive action)
 
 Before any exploration, ask the user how involved they want to be. This is the **only** mandatory user prompt — the rest of the run pauses for input only at the chosen checkpoint.
@@ -67,7 +89,7 @@ Don't jump to questions. Dispatch 1–2 narrow explore agents first, **scoped to
 {"tool":"agent_run","args":{
 	"op":"start",
 	"model_id":"explore",
-	"session_name":"Ambiguity scout: <area>",
+	"session_name":"PLAN #123 · Ambiguity scout: <area>",
 	"message":"What existing patterns or conventions in <area> might apply to <user task>? Report 2–3 concrete patterns with file:line refs and a one-sentence description of each. Don't propose solutions.",
 	"detach":true
 }}
@@ -95,14 +117,14 @@ Dispatch explore agents in parallel to map the surface area the plan will touch.
 | **External research** | Only when the plan depends on external APIs, libraries, standards, or behaviour outside the repo | "Look up <library/API/RFC>. Report current behavior, version notes, and links." |
 | **Prior art** | When the area has likely been touched before | "Check `docs/plans/`, `docs/completed/`, recent commits in `<area>`. Anything similar tried? Summarize." |
 
-Each explore gets ONE narrow question. Spawn with `detach: true`, then wait on the batch.
+Each explore gets ONE narrow question. Spawn with `detach: true`, then wait on the batch. Prefix every dispatched agent's `session_name` with this run's Phase 0 name segment (`PLAN #<issue> · …`, or `PLAN · …` when there's no issue) so child sessions stay grouped with their parent in the session list.
 
 ```json
 // In-workspace seam probe
 {"tool":"agent_run","args":{
 	"op":"start",
 	"model_id":"explore",
-	"session_name":"Seams: <area>",
+	"session_name":"PLAN #123 · Seams: <area>",
 	"message":"How does <subsystem> connect to <adjacent area>? Key types, extension points, file:line refs. No proposals.",
 	"detach":true
 }}
@@ -111,7 +133,7 @@ Each explore gets ONE narrow question. Spawn with `detach: true`, then wait on t
 {"tool":"agent_run","args":{
 	"op":"start",
 	"model_id":"explore",
-	"session_name":"External: <topic>",
+	"session_name":"PLAN #123 · External: <topic>",
 	"message":"Look up <library/API/RFC>. Report current behavior, version notes, and 2–3 links.",
 	"detach":true
 }}
@@ -189,7 +211,7 @@ Dispatch a design agent **once**, with tight scope, to check the plan against bo
 {"tool":"agent_run","args":{
 	"op":"start",
 	"model_id":"design",
-	"session_name":"Plan critique: <topic>",
+	"session_name":"PLAN #123 · Plan critique: <topic>",
 	"message":"Read the plan at `docs/plans/<topic>-<YYYY-MM-DD>.md` and the complete original context_builder export at `<oracle_export_path>` — treat only its generated plan response as the baseline; any composed prompt or selected-file dump it opens with is context, not plan content. Produce a focused critique under `docs/reviews/`. Cover ONLY:\n1. Implementation-bearing content from the export that is missing, weakened, or generalized in the plan\n2. Under-specified seams, unresolved material decisions, contradictions, incorrect references, or missing dependencies\n3. Plan or export details that the code disproves, the task does not require, or a named simpler design fully replaces — give the precise correction and its justification\n4. Requirements, edge cases, dependencies, or architectural problems absent from both the export and the plan — ownership, lifecycle, failure behavior, cancellation, testability\n5. Questions whose answers would materially change the design or implementation order\n\nDo not recommend removing accurate content merely because it is specific or low-level. Do not expand user scope, rewrite the plan, or perform broad codebase exploration unless one named seam needs a focused spot-check.",
 	"wait":true
 }}
@@ -258,6 +280,8 @@ Plan and review exports generated during orchestration (via `export_response:tru
 
 ## Anti-patterns
 
+- 🚫 Skipping the Phase 0 `set_status` call, or naming the session anything other than `PLAN #<issue>: <title>` / `PLAN: <title>`
+- 🚫 Inventing an issue number when the request doesn't have one — drop the `#<issue>` segment instead
 - 🚫 Skipping the involvement-level question — always ask first; the answer changes the run
 - 🚫 Asking generic or thin questions when in "Up front" / "Mid-flow" mode — questions must be informed by exploration findings or by the current draft's ambiguities
 - 🚫 More than 4 questions per checkpoint — interrogation isn't shaping

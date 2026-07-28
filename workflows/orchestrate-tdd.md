@@ -12,6 +12,30 @@ Raw request: $ARGUMENTS
 
 You are an orchestrator: **plan**, **decompose**, **delegate**. Implementation and deep context-gathering happen in sub-agents. Keep your own context lean for coordination.
 
+## Phase 0: Name the Session (REQUIRED — first action)
+
+Before anything else, call `set_status` to name this session using the standard convention:
+
+```
+IMPL #<issue>: <short title>
+```
+
+- **`IMPL`** — always uppercase, always first, so implementation sessions sort and scan together.
+- **`#<issue>`** — the issue/ticket number when the request names one (e.g. `#123`, from `$ARGUMENTS`, a linked URL, a branch name, or the plan file you were handed). **Omit the `#<issue>` segment entirely if there is no issue number** — don't invent one, don't write `#TBD`.
+- **`<short title>`** — a few words in the codebase's own terms, not a restatement of the whole request.
+
+```json
+{"tool":"set_status","args":{"session_name":"IMPL #123: retry logic in NetworkService"}}
+```
+
+With no issue number: `IMPL: retry logic in NetworkService`.
+
+If the run started from a plan produced by **Deep Plan (TDD)** (a `PLAN #123: …` session), reuse that issue number and title so the plan and its implementation line up in the session list.
+
+Set this once, up front, before any exploration or dispatch. Don't rename mid-run unless the scope genuinely changes.
+
+---
+
 ## Phase 1: Contextualize the Task
 
 Translate the user's prompt into the codebase's actual nouns — concrete modules, filenames, patterns — so builder can focus immediately instead of disambiguating. 1-2 navigation calls (tree or search) is usually enough.
@@ -55,7 +79,7 @@ If you can't disambiguate from a quick scan, dispatch a narrow explore agent fir
   "args": {
     "op": "start",
     "model_id": "explore",
-    "session_name": "Explore: <area>",
+    "session_name": "IMPL #123 · Explore: <area>",
     "message": "Check <specific thing> — report back briefly."
   }
 }
@@ -97,7 +121,7 @@ The tool returns `oracle_export_path` and `oracle_export_instruction`. Include `
 {"tool":"agent_run","args":{
 	"op":"start",
 	"model_id":"pair",
-	"session_name":"Orchestrate: <goal>",
+	"session_name":"IMPL #123 · <goal>",
 	"message":"Read the plan at <plan path> with read_file first. Implement <work item>."
 }}
 ```
@@ -146,7 +170,7 @@ Verify each item before the next dispatch. Catching drift before the next agent 
 {"tool":"agent_run","args":{
 	"op":"start",
 	"model_id":"pair",
-	"session_name":"Orchestrate 1/N: <item 1 goal>",
+	"session_name":"IMPL #123 · 1/N: <item 1 goal>",
 	"message":"Read the plan at <plan path> with read_file first. Your job is item 1: <brief>. Later items are handled separately."
 }}
 
@@ -165,7 +189,7 @@ Verify each item before the next dispatch. Catching drift before the next agent 
 {"tool":"agent_run","args":{
 	"op":"start",
 	"model_id":"pair",
-	"session_name":"Orchestrate 2/N: <item 2 goal>",
+	"session_name":"IMPL #123 · 2/N: <item 2 goal>",
 	"message":"Read the plan at <plan path> with read_file first. Item 1 is complete. Your job is item 2: <brief>."
 }}
 ```
@@ -213,6 +237,16 @@ When in doubt, use `pair`. The tasks reaching this workflow are complex by natur
 
 When questions arise during coordination, reason through them yourself. If you're uncertain, negotiate with the agent already working on the relevant task — it has the deepest context. Steer it with your thinking and work toward consensus rather than dictating a direction.
 
+### Naming dispatched sessions
+
+Every agent you dispatch inherits this run's Phase 0 name segment as a prefix, then adds its own item label:
+
+```
+IMPL #<issue> · <n>/<N>: <item goal>
+```
+
+With no issue number, the prefix is just `IMPL · <n>/<N>: <item goal>`. Keep the prefix byte-identical across every child so the whole run groups together in the session list, and keep the `<n>/<N>` counter accurate — it's how you tell at a glance which items are still outstanding. Explore agents dispatched from Phase 1 use the same prefix with `Explore: <area>` in place of the counter.
+
 ### Writing the dispatch brief
 
 The agents you dispatch are fully capable — they have tools, they'll read AGENTS.md and project instructions, they can explore and reason. Your job is to orient them, not direct them.
@@ -257,8 +291,8 @@ Then pass `session_ids` (array) to `agent_run op=wait` to block until the **firs
 
 ```json
 // Dispatch both concurrently
-{"tool":"agent_run","args":{"op":"start","model_id":"pair","session_name":"1/N: <goal A>","message":"<brief A>","detach":true}}
-{"tool":"agent_run","args":{"op":"start","model_id":"pair","session_name":"2/N: <goal B>","message":"<brief B>","detach":true}}
+{"tool":"agent_run","args":{"op":"start","model_id":"pair","session_name":"IMPL #123 · 1/N: <goal A>","message":"<brief A>","detach":true}}
+{"tool":"agent_run","args":{"op":"start","model_id":"pair","session_name":"IMPL #123 · 2/N: <goal B>","message":"<brief B>","detach":true}}
 
 // Then wait for the first session that needs attention
 {"tool":"agent_run","args":{"op":"wait","session_ids":["<session_id_A>","<session_id_B>"],"timeout":60}}
@@ -334,7 +368,8 @@ After all items complete, give the user a **final rollup**:
 
 | Operation                         | Tool call                                                                               |
 | --------------------------------- | --------------------------------------------------------------------------------------- |
-| Start a fresh agent               | `agent_run op=start model_id=<role> session_name="..." message="..." detach=true/false` |
+| Name this session                 | `set_status session_name="IMPL #<issue>: <title>"` (Phase 0, once)                       |
+| Start a fresh agent               | `agent_run op=start model_id=<role> session_name="IMPL #<issue> · <n>/<N>: <goal>" message="..." detach=true/false` |
 | Steer an existing agent           | `agent_run op=steer session_id="..." message="..." wait=true`                           |
 | Wait for an agent                 | `agent_run op=wait session_id="..."`                                                    |
 | Wait for first of multiple agents | `agent_run op=wait session_ids=["...", "..."] timeout=60`                               |
