@@ -1,11 +1,11 @@
 ---
-id: 9B54C132-102E-453D-8880-9E1C153AC73B
-name: "Orchestrate (Clone)"
+id: 6A886457-E542-4254-BD43-705BF08EA78D
+name: "Orchestrate (TDD)"
 icon: "arrow.triangle.branch"
 tooltip: "Plan, decompose, and delegate tasks across multiple agents"
-description: "Breaks a complex request into smaller tasks, sends agents to do the work, and checks each result."
+description: "Breaks a complex request into smaller tasks, sends agents to do the work, and
+checks each result."
 ---
-
 # Orchestrator
 
 Raw request: $ARGUMENTS
