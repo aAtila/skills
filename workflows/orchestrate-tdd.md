@@ -117,6 +117,8 @@ For each item, note:
 - **Dependencies**: Which other items must complete first, if any
 - **Size**: Small (focused change) or large (multi-file, architectural)
 
+A plan you didn't commission rarely names seams — only Phase 1 asks for them, and a user-provided plan file skips it. Where an implementation item arrives without one, name the seam here and write it into the plan file with `apply_edits`, so the brief, the plan, and the sub-agent's report all point at the same boundary.
+
 Most tasks decompose into **2-3 items** — that's the sweet spot. If you're reaching for 4-5, consider whether some items can be combined. If you're beyond 5, you're decomposing too finely — raise the abstraction level.
 
 If the task is naturally **1 item**, dispatch it directly and skip the rest of this workflow.
