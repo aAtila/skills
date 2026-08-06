@@ -32,7 +32,7 @@ With no issue number: `IMPL: retry logic in NetworkService`.
 
 If the run started from a plan produced by **Deep Plan (TDD)** (a `PLAN #123: …` session), reuse that issue number and title so the plan and its implementation line up in the session list.
 
-Set this once, up front, before any exploration or dispatch. Don't rename mid-run unless the scope genuinely changes.
+Set this once, up front, before any exploration or dispatch. Don't rename mid-run unless the scope genuinely changes. One exception: if Phase 1 calls `context_builder`, that call overwrites this name and Phase 1 re-asserts the identical string. That's a restore, not a rename.
 
 ---
 
@@ -69,6 +69,14 @@ Then:
 }
 ```
 
+**If you made that call, re-assert the session name immediately.** When `context_builder` titles its chat, RepoPrompt overwrites the Agent Mode session name with that chat title, discarding the Phase 0 name and its `IMPL #<issue>` prefix. Make this the very next call, passing the byte-identical string Phase 0 set:
+
+```json
+{"tool":"set_status","args":{"session_name":"IMPL #123: retry logic in NetworkService"}}
+```
+
+This only applies when you generate the plan yourself. A run that was handed a plan file skips `context_builder` entirely and keeps its Phase 0 name untouched — which is exactly why some past runs kept their prefix and others lost it.
+
 When the task involves writing code, append one line to `instructions`: _"For each work item, name the public seam its tests should be written against."_ Phase 2 needs a seam per item, so it's cheapest to have the plan produce them.
 
 If you can't disambiguate from a quick scan, dispatch a narrow explore agent first:
@@ -99,6 +107,8 @@ Once you have a plan — whether generated via builder or provided by the user �
 For user-provided plan files, you already have a path — just reference it in dispatch briefs.
 
 The tool returns `oracle_export_path` and `oracle_export_instruction`. Include `oracle_export_path` inside the `message` you send on your next `agent_run` `start` call. The `oracle_export_instruction` field is a ready-made sentence ("Read the Oracle export at `<path>` with `read_file` …") you can emit verbatim at the head of that `message`. The child agent opens the file with `read_file`. Do **not** ask child agents to continue your Oracle chat — they are in different tabs.
+
+Any call that titles a chat — `context_builder` or `ask_oracle` — renames this session to that title. Whenever you make one, re-assert the Phase 0 name straight after.
 
 **The export is a shared document.** Sub-agents treat it as **read-only** context. As the orchestrator, you own this file — use it as a living checklist by updating it (via `apply_edits`) to mark items complete, note deferred work, or track progress across phases.
 
@@ -368,7 +378,7 @@ After all items complete, give the user a **final rollup**:
 
 | Operation                         | Tool call                                                                               |
 | --------------------------------- | --------------------------------------------------------------------------------------- |
-| Name this session                 | `set_status session_name="IMPL #<issue>: <title>"` (Phase 0, once)                       |
+| Name this session                 | `set_status session_name="IMPL #<issue>: <title>"` (Phase 0; re-assert after `context_builder`) |
 | Start a fresh agent               | `agent_run op=start model_id=<role> session_name="IMPL #<issue> · <n>/<N>: <goal>" message="..." detach=true/false` |
 | Steer an existing agent           | `agent_run op=steer session_id="..." message="..." wait=true`                           |
 | Wait for an agent                 | `agent_run op=wait session_id="..."`                                                    |

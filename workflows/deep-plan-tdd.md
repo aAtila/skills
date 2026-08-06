@@ -42,7 +42,7 @@ PLAN #<issue>: <short title>
 
 With no issue number: `PLAN: retry logic in NetworkService`.
 
-Set this once, up front, before any exploration or delegation. Don't rename mid-run unless the scope genuinely changes — a stable name is what makes the session list readable later.
+Set this once, up front, before any exploration or delegation. Don't rename mid-run unless the scope genuinely changes — a stable name is what makes the session list readable later. One exception is mandatory: the Phase 4 `context_builder` call overwrites this name, so Phase 4 re-asserts the identical string. That's a restore, not a rename.
 
 ---
 
@@ -177,6 +177,14 @@ Call `context_builder` in plan mode with `export_response: true`. Request the fu
 }}
 ```
 
+**Re-assert the session name immediately — this call renames your tab.** When `context_builder` titles its chat, RepoPrompt overwrites the Agent Mode session name with that chat title, silently discarding the Phase 0 name and its `PLAN #<issue>` prefix. Verified: sessions whose chat got titled are named exactly after it, while sessions whose chat stayed untitled keep their own name. Make this the very next call, before reading the export:
+
+```json
+{"tool":"set_status","args":{"session_name":"PLAN #123: retry logic in NetworkService"}}
+```
+
+Pass the byte-identical string Phase 0 set. This is the only point in the run where the name is clobbered, so one re-assert here holds for the rest of the session. Don't skip it because the tab still looks right — the rename lands whenever the chat gets its title, which may be after the tool call returns.
+
 The tool returns `oracle_export_path`. **Use the export's generated plan as the preservation baseline.** Export files may open with the composed prompt and a selected-file dump; the baseline is the generated response that follows, not that context echo. The codebase and explicit user decisions stay authoritative.
 
 1. Read the complete export with `read_file`; if a read is truncated, continue in chunks until every line has been read. While reading, build a compact coverage ledger of the baseline: each section and its concrete implementation-bearing items (facts, decisions, rationale, constraints, edge cases, sequencing, verification), a few words apiece. Phase 7.5 walks this ledger.
@@ -282,6 +290,7 @@ Plan and review exports generated during orchestration (via `export_response:tru
 
 - 🚫 Skipping the Phase 0 `set_status` call, or naming the session anything other than `PLAN #<issue>: <title>` / `PLAN: <title>`
 - 🚫 Inventing an issue number when the request doesn't have one — drop the `#<issue>` segment instead
+- 🚫 Skipping the Phase 4 name re-assert — `context_builder` silently renames the tab to its chat title, and without the re-assert the Phase 0 prefix is gone from the session list
 - 🚫 Skipping the involvement-level question — always ask first; the answer changes the run
 - 🚫 Asking generic or thin questions when in "Up front" / "Mid-flow" mode — questions must be informed by exploration findings or by the current draft's ambiguities
 - 🚫 More than 4 questions per checkpoint — interrogation isn't shaping
