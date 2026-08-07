@@ -13,7 +13,9 @@ This skill commits by default. Generate the message, stage the right files, and 
 
 ### Step 0: Format the code
 
-Detect the project's formatter and run it. Check in this order and use the first match:
+If formatting already ran *after the last code edit* in this conversation (e.g. the previous step ran the formatter or a linter with `--fix`), skip this step — rerunning is redundant. If any code was edited after the last format run, run it again.
+
+Otherwise, detect the project's formatter and run it. Check in this order and use the first match:
 
 - **Node** — if `package.json` exists and has a `format` script: run it via the matching package manager (`pnpm format` if `pnpm-lock.yaml`, `yarn format` if `yarn.lock`, `bun run format` if `bun.lockb`, otherwise `npm run format`).
 - **Rust** — `cargo fmt` if `Cargo.toml` exists.
