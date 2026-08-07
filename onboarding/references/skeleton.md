@@ -32,4 +32,6 @@ and one concrete numbered end-to-end walkthrough]
 
 ## Quick Wins to Build Confidence
 [Two small tasks: one that exercises understanding, one slightly deeper]
+
+Verified: [date] against [short commit]
 ```

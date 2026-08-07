@@ -1,6 +1,6 @@
 ---
 name: onboarding
-description: Write a verified onboarding walkthrough for one codebase area. Use when the user asks to be onboarded to a module/feature/subsystem, wants an onboarding doc written or updated in docs/onboarding/, or asks for a "where do I start" walkthrough of unfamiliar code. Grounds in the repo's domain docs, maps the area with context_builder, writes docs/onboarding/<area>.md, then verifies every claim.
+description: Write a verified onboarding walkthrough for one codebase area into docs/onboarding/.
 disable-model-invocation: true
 ---
 
@@ -41,6 +41,8 @@ Call `context_builder` with `response_type: "plan"`. In the instructions:
 
 Let the builder do the mapping — your own exploration before this call is limited to Step 2's reading.
 
+If `context_builder` is unavailable (no RepoPrompt MCP), do the mapping yourself — MODULES.md entry → its listed code homes → entry points and tests — and answer Step 4's questions from that reading instead of a chat.
+
 ## Step 4: Clarify
 
 Continue the returned chat (`ask_oracle`, `new_chat: false`) with at most three follow-ups, chosen from what the plan left thin:
@@ -70,4 +72,4 @@ The doc is done only when every row passes:
 | Design decision | linked to its ADR, not re-derived |
 | Config value / env var | lives in the linked runbook, not copied here |
 
-Fix or delete anything that fails — a missing claim is recoverable; a confidently wrong one poisons the reader's trust in the whole doc. Then deliver: the file path plus a short summary of what the doc covers.
+Fix or delete anything that fails — a missing claim is recoverable; a confidently wrong one poisons the reader's trust in the whole doc. Then stamp the doc's last line — `Verified: <date> against <short HEAD commit>`; the `doc-sync` skill uses the stamp to scope re-verification — and deliver: the file path plus a short summary of what the doc covers.
