@@ -59,7 +59,7 @@ Use this skill when:
    capture how skills should be invoked and chained
 
 **Skip this pattern when:** the skill is small enough that any reasonable trigger
-produces equivalent output (e.g. `aa-commit`, `semantic-html`). The maintenance
+produces equivalent output (e.g. `commit-me`, `semantic-html`). The maintenance
 burden of a USAGE.md only earns its place when invocation phrasing has real
 output-quality leverage.
 

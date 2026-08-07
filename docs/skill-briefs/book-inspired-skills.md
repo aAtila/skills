@@ -29,7 +29,7 @@ PLAN       to-prd (new/complex feature) ─or─ skip PRD for small tasks → to
 PREPARE    legacy-seams (if blast radius untested) → tidy-first (warm-up on existing code)
 BUILD      tdd, issue by issue (red → green → refactor)
 VERIFY     review (see routing rule) → qa-plan (realistic UX flows — additive to unit tests, not a replacement)
-SHIP       aa-commit → aa-pr-message
+SHIP       commit-me → aa-pr-message
 MAINTAIN   improve-codebase-architecture / improve-codebase-colocation, fed by hotspot-analysis
            language-drift (periodic glossary↔code alignment sweep)
 ```
@@ -40,7 +40,7 @@ CONTEXT.md + retroactive ADRs on a brownfield repo (run once); `grill-with-docs`
 changes that bypassed both (teammates who don't use the skills).
 
 **The bug path** (distinct from the feature path — don't skip discipline because it's "just a fix"):
-`reproduce → diagnose → failing regression test (tdd red) → fix → green → aa-commit`.
+`reproduce → diagnose → failing regression test (tdd red) → fix → green → commit-me`.
 
 **Review routing rule** (which review when):
 - `aa-simplify` — always, on every non-trivial change (removal-biased pass).
@@ -376,7 +376,7 @@ refactoring). It's a real chunk of weekly engineering work with no skill today.
 
 **Pipeline position:** Standalone track, parallel to the feature pipeline. Receives from:
 the user directly ("upgrade Next to 16", "replace moment with date-fns"), or `improve` /
-`hotspot-analysis` findings. Hands off to `aa-commit` per step and `aa-pr-message` at the end.
+`hotspot-analysis` findings. Hands off to `commit-me` per step and `aa-pr-message` at the end.
 If the migration surface is untested → `legacy-seams` first (same keystone hand-off as
 `refactor-catalog`).
 

@@ -7,7 +7,7 @@ description: Drafts a PR/MR title and markdown body from a branch's commits — 
 
 This skill stops at the clipboard on purpose. The user wants to read the title and body before pasting them into a PR (GitHub) or merge request (GitLab) — via `gh`, `glab`, or the web UI. ("PR" throughout means either; the job is identical.) Two siblings cover the adjacent jobs:
 
-- **`aa-commit`** — generates the message for a single commit and copies it to the clipboard.
+- **`commit-me`** — generates the message for a single commit and copies it to the clipboard.
 - **`aa-commit-clarity`** — advisory only. Use first when a branch contains genuinely separable concerns and you want to think about whether it should be one PR or several before drafting the body.
 
 The body of a PR is a different artifact than a commit message. A commit explains one change; a PR explains a branch — usually multiple commits — to a human reviewer who has not been living inside it. **The diff shows the *what*; the body supplies the *why*.** That principle drives every choice below — the job is reviewer comprehension, not change logging.

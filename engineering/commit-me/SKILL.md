@@ -1,5 +1,5 @@
 ---
-name: aa-commit
+name: commit-me
 description: Use whenever the user asks to commit, save changes, prepare a commit, wrap up work, or finish up a chunk of code — even if they don't say the word "commit" explicitly. Formats code if a formatter is configured, generates a conventional commit message, stages the relevant files, and commits — unless the user says not to commit, in which case it stops at the staged message for review.
 ---
 
