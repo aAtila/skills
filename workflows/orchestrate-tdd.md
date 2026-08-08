@@ -374,6 +374,56 @@ After all items complete, give the user a **final rollup**:
 - Any conflicts or coordination issues that surfaced
 - Suggested follow-ups if anything was deferred
 
+---
+
+## Phase 5: Review and Triage
+
+After all items verify, and **before any commit**, run the review loop. It is deliberately asymmetric: a **cold reviewer** (fresh session, sees only the diff and repo) meets a **warm triager** (you, holding the implementation context — the decisions, constraints, and abandoned approaches). The cold read finds problems your context would excuse; your warm triage rejects suggestions the reviewer's blindness produced. Keep both sides of that asymmetry intact.
+
+### 1. Dispatch the cold reviewer
+
+```json
+{"tool":"agent_run","args":{
+	"op":"start",
+	"model_id":"design",
+	"workflow_name":"Review",
+	"session_name":"IMPL #123 · Review",
+	"message":"Review the recently implemented changes related to issue #123.",
+	"detach":true
+}}
+```
+
+**Keep the brief to that one sentence.** Naming your design decisions, constraints, or reasoning in the dispatch message warms up the reviewer and defeats the cold read — the diff and the repo are its entire input. Save the reviewer's `session_id`; you'll steer it next.
+
+Wait for the review with `agent_run op=wait`.
+
+### 2. Triage warm with `apply-review`
+
+Load the `apply-review` skill and run it in **this session** — triage lives with the implementation context, never in a fresh sub-agent (a fresh agent is the skill's "coming in cold" case and collapses into compliance). Follow the skill's **orchestrated mode**.
+
+For anything unclear or contestable, interrogate the reviewer directly — you hold its handle:
+
+```json
+{"tool":"agent_run","args":{
+	"op":"steer",
+	"session_id":"<review session_id>",
+	"message":"Finding 3 claims X, but <specific question>. Clarify what you meant / what you observed.",
+	"wait":true
+}}
+```
+
+Reviewers routinely withdraw findings under specific questioning — ask before you triage, not after.
+
+### 3. Apply and report
+
+Per the skill's orchestrated mode: apply `apply` and `reframe` verdicts immediately (as narrow fresh agents for behavioral or multi-file fixes; directly for mechanical few-file ones), hold everything else for the rollup. Verify with the project's quality gates.
+
+Include in the final rollup: the full verdict table, what was applied, and the held findings (`reject`/`defer`/`invalid`) with one-line reasons so the user can push back.
+
+**Commit only after triage completes.** A commit that lands before the review is triaged forces follow-up work on top of it. And keep the review session out of `cleanup_sessions` until triage is done — you may still need to steer it.
+
+---
+
 ### Quick reference: orchestrator operations
 
 | Operation                         | Tool call                                                                               |

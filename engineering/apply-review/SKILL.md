@@ -76,6 +76,17 @@ Keep reasons to one line. Then:
 - **Any `reject`, `defer`, `invalid`, or `unclear`** — stop. Wait for the user. Those are the calls where you're claiming knowledge the user can't verify from the table alone, and they're cheap to correct now and expensive to correct after edits.
 - **Any `apply` that touches something risky** — auth, payments, migrations, data deletion, public API shape — stop regardless.
 
+#### Orchestrated mode
+
+When you are an orchestrator running this skill mid-workflow (e.g. Phase 5 of Orchestrate (TDD)), the user is not at the gate and idling the run to wait for them wastes the pipeline. The gate moves from *before edits* to *the final rollup*:
+
+- Print the table, then **proceed immediately** with `apply` and `reframe` items — nothing is committed yet, so a wrong call is cheap to revert.
+- **Hold** `reject`, `defer`, and `invalid` — report them in the rollup with one-line reasons so the user can overturn any of them.
+- `unclear` findings go back to the **reviewer** first (steer its session with a specific question); only escalate to the user if the reviewer can't resolve it.
+- The risky-`apply` stop (auth, payments, migrations, data deletion, public API shape) **still applies** — surface those to the user before touching them, orchestrated or not.
+
+Everything else in this skill is unchanged: the rejection rule, verify-before-judging, and the close-out report all run at full strength.
+
 ### 5. Apply
 
 Make the accepted changes. Then verify: run the tests, typecheck, build — whatever the project uses. A review-driven fix that breaks the build is worse than the original finding.
