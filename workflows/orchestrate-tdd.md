@@ -378,9 +378,13 @@ After all items complete, give the user a **final rollup**:
 
 ## Phase 5: Review and Triage
 
-After all items verify, and **before any commit**, run the review loop. It is deliberately asymmetric: a **cold reviewer** (fresh session, sees only the diff and repo) meets a **warm triager** (you, holding the implementation context — the decisions, constraints, and abandoned approaches). The cold read finds problems your context would excuse; your warm triage rejects suggestions the reviewer's blindness produced. Keep both sides of that asymmetry intact.
+After all items verify, run the review loop. It brackets the run's work in **two commits**: the implementation lands first, review fixes land second, so a bad fix reverts cleanly without touching the implementation. The loop itself is deliberately asymmetric: a **cold reviewer** (fresh session, sees only the diff and repo) meets a **warm triager** (you, holding the implementation context — the decisions, constraints, and abandoned approaches). The cold read finds problems your context would excuse; your warm triage rejects suggestions the reviewer's blindness produced. Keep both sides of that asymmetry intact.
 
-### 1. Dispatch the cold reviewer
+### 1. Commit the implementation
+
+Commit the run's implementation now with the `commit-me` skill, scoped to the files this run's agents touched. This gives the reviewer an exact diff target instead of a fuzzy dirty tree, and closes the window where staged files can be swept into a concurrent session's commit. On a working branch an intermediate commit with findings-still-to-fix is harmless; squash at PR time if it matters.
+
+### 2. Dispatch the cold reviewer
 
 ```json
 {"tool":"agent_run","args":{
@@ -397,30 +401,30 @@ After all items verify, and **before any commit**, run the review loop. It is de
 
 Wait for the review with `agent_run op=wait`.
 
-### 2. Triage warm with `apply-review`
+### 3. Triage warm with `apply-review`
 
 Load the `apply-review` skill and run it in **this session** — triage lives with the implementation context, never in a fresh sub-agent (a fresh agent is the skill's "coming in cold" case and collapses into compliance). Follow the skill's **orchestrated mode**.
 
-For anything unclear or contestable, interrogate the reviewer directly — you hold its handle:
+For anything unclear or contestable, interrogate the reviewer directly — you hold its handle. Write each steer message fresh: quote the finding verbatim, state the concrete thing you see in the code that makes it unclear or contestable, and ask **one specific question**. One finding per steer — bundled questions get bundled, shallower answers.
 
 ```json
 {"tool":"agent_run","args":{
 	"op":"steer",
 	"session_id":"<review session_id>",
-	"message":"Finding 3 claims X, but <specific question>. Clarify what you meant / what you observed.",
+	"message":"<your question>",
 	"wait":true
 }}
 ```
 
 Reviewers routinely withdraw findings under specific questioning — ask before you triage, not after.
 
-### 3. Apply and report
+### 4. Apply, commit the fixes, report
 
 Per the skill's orchestrated mode: apply `apply` and `reframe` verdicts immediately (as narrow fresh agents for behavioral or multi-file fixes; directly for mechanical few-file ones), hold everything else for the rollup. Verify with the project's quality gates.
 
 Include in the final rollup: the full verdict table, what was applied, and the held findings (`reject`/`defer`/`invalid`) with one-line reasons so the user can push back.
 
-**Commit only after triage completes.** A commit that lands before the review is triaged forces follow-up work on top of it. And keep the review session out of `cleanup_sessions` until triage is done — you may still need to steer it.
+**Commit the applied fixes with `commit-me` as their own commit**, referencing the review — separate from the implementation commit, so a fix that turns out bad reverts on its own. And keep the review session out of `cleanup_sessions` until triage is done — you may still need to steer it.
 
 ---
 
