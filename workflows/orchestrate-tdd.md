@@ -436,6 +436,27 @@ Include in the final rollup: the full verdict table, what was applied, and the h
 
 ---
 
+## Phase 6: Acceptance Triage
+
+Runs only when the run has an issue number (the Phase 0 name carries `#<issue>`), and only after the Phase 5 fix commit lands — the verifier judges the final state, review fixes included.
+
+Dispatch a cold verifier: a fresh session grading the work against the **issue's acceptance criteria**, not your implementation narrative — the orchestrator grading its own homework is what the fresh session avoids. Keep the brief to the issue reference and the mandate; name the `triage` skill (sub-agents start clean, same as `tdd`):
+
+```json
+{"tool":"agent_run","args":{
+	"op":"start",
+	"model_id":"engineer",
+	"session_name":"IMPL #123 · Triage",
+	"message":"Load the `triage` skill. Issue #123 — implementation is done. Verify that all acceptance criteria are met. Close the issue if everything checks out; report any unmet AC instead of closing."
+}}
+```
+
+The verifier closes the issue itself when everything checks out — you report the close in the rollup, you don't re-approve it. Unmet ACs come back as a list: each becomes a follow-up dispatch or a user escalation, your call by size.
+
+Done when the issue is closed, or every unmet AC is either dispatched or surfaced in the rollup.
+
+---
+
 ## If the user stops the run
 
 Abort is a first-class exit, not a failure. When the user halts mid-flight:
