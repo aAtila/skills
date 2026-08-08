@@ -38,7 +38,12 @@ Set this once, up front, before any exploration or dispatch. Don't rename mid-ru
 
 ## Phase 1: Contextualize the Task
 
-Translate the user's prompt into the codebase's actual nouns — concrete modules, filenames, patterns — so builder can focus immediately instead of disambiguating. 1-2 navigation calls (tree or search) is usually enough.
+Two cheap captures before anything else:
+
+- **Baseline** — `git op=status`. The pre-existing dirty files are the baseline; everything the run later diffs, commits, or reverts is measured against it. Files dirty at baseline belong to someone else — leave them out of this run's commits.
+- **Caveats ledger** — if the repo keeps one (look for `docs/known-caveats.md`), read it. It lists environment quirks past runs already diagnosed — pre-existing lint failures, sandbox restrictions, unavailable services. Treat a listed quirk as known: acknowledge it in one line and move on instead of re-diagnosing it.
+
+Then translate the user's prompt into the codebase's actual nouns — concrete modules, filenames, patterns — so builder can focus immediately instead of disambiguating. 1-2 navigation calls (tree or search) is usually enough.
 
 Example:
 
@@ -313,6 +318,8 @@ Then pass `session_ids` (array) to `agent_run op=wait` to block until the **firs
 
 Handle the finished agent, then wait again on the remaining `pending_session_ids`. Work as a **pipeline**: while one agent runs, summarize completed work or prepare the next brief.
 
+The sibling rule extends across runs: when you know another orchestration run is active in the same repo (the user will usually tell you; a `git status` showing unexplained fresh changes is a hint to ask), **every** brief — parallel or sequential — names that run and its module territory, with the same keep-out-and-report instruction. Sibling-run files are also outside this run's commits, however tempting a `git add` sweep looks.
+
 ### Housekeeping
 
 Sessions persist after agents finish — useful when you might revisit output, but they pile up over a multi-agent workflow. Once you've recorded what an agent produced, you can dismiss its session:
@@ -346,7 +353,7 @@ You own the plan. It's your job to ensure each phase respected it.
 
 As each agent completes:
 
-1. **Verify against the plan.** Check the agent's output against the "done when" criteria and confirm the goal was actually met. A quick `read_file` or `file_search` on key deliverables costs little and catches drift before it compounds. If the plan said "add error handling to all three endpoints" and the agent only touched two, that's your catch. Mark the item as done (or note gaps) in the export file so you have a running record.
+1. **Verify against the plan.** Check the agent's output against the "done when" criteria and confirm the goal was actually met. A quick `read_file` or `file_search` on key deliverables costs little and catches drift before it compounds. If the plan said "add error handling to all three endpoints" and the agent only touched two, that's your catch. Mark the item as done (or note gaps) in the export file, **and record the files it changed** — this manifest is the run's authoritative footprint: it scopes the Phase 5 commits, the abort path, and conflict checks against sibling runs.
 2. **If something's off**, steer a correction before dispatching anything else:
 
 ```json
@@ -373,6 +380,7 @@ After all items complete, give the user a **final rollup**:
 - Any failures or partial completions
 - Any conflicts or coordination issues that surfaced
 - Suggested follow-ups if anything was deferred
+- Any environment quirk this run diagnosed that the caveats ledger doesn't list — append it to the ledger (create `docs/known-caveats.md` if the repo lacks one) so the next run reads it instead of rediscovering it
 
 ---
 
@@ -382,7 +390,7 @@ After all items verify, run the review loop. It brackets the run's work in **two
 
 ### 1. Commit the implementation
 
-Commit the run's implementation now with the `commit-me` skill, scoped to the files this run's agents touched. This gives the reviewer an exact diff target instead of a fuzzy dirty tree, and closes the window where staged files can be swept into a concurrent session's commit. On a working branch an intermediate commit with findings-still-to-fix is harmless; squash at PR time if it matters.
+Commit the run's implementation now with the `commit-me` skill, staging exactly the manifest files from Phase 4 — baseline-dirty and sibling-run files stay out. This gives the reviewer an exact diff target instead of a fuzzy dirty tree, and closes the window where staged files can be swept into a concurrent session's commit. On a working branch an intermediate commit with findings-still-to-fix is harmless; squash at PR time if it matters.
 
 ### 2. Dispatch the cold reviewer
 
@@ -425,6 +433,18 @@ Per the skill's orchestrated mode: apply `apply` and `reframe` verdicts immediat
 Include in the final rollup: the full verdict table, what was applied, and the held findings (`reject`/`defer`/`invalid`) with one-line reasons so the user can push back.
 
 **Commit the applied fixes with `commit-me` as their own commit**, referencing the review — separate from the implementation commit, so a fix that turns out bad reverts on its own. And keep the review session out of `cleanup_sessions` until triage is done — you may still need to steer it.
+
+---
+
+## If the user stops the run
+
+Abort is a first-class exit, not a failure. When the user halts mid-flight:
+
+1. **Cancel running children** — `agent_run op=cancel` on every active session.
+2. **Diff against the baseline** — separate this run's changes (the manifest, plus whatever an in-flight agent touched) from baseline-dirty and sibling-run files.
+3. **Offer a patch-backed revert** — save this run's changes as a patch file, then revert exactly those files, leaving everything else untouched. Present the choice; revert only on the user's confirmation.
+
+Done when the tree matches the user's choice — kept as-is, or restored to baseline with the patch saved for later.
 
 ---
 
