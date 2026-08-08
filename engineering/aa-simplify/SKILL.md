@@ -1,6 +1,6 @@
 ---
 name: aa-simplify
-description: Use whenever the user wants a critical second-pass focused on cutting code — phrasings like "simplify this", "is this over-engineered?", "did I overdo it?", "what would you remove?", "feels bloated", "any cleanup opportunities?", "second look at this", "take another pass". Reviews recent changes for KISS/YAGNI violations, premature abstraction, defensive coding, unused configurability, and dead branches. Biased toward removal — outputs findings for discussion, not direct edits.
+description: Use whenever the user wants a critical second-pass focused on cutting code — phrasings like "simplify this", "is this over-engineered?", "did I overdo it?", "what would you remove?", "feels bloated", "any cleanup opportunities?". Reviews recent changes with a bias toward removal — outputs findings for discussion, not direct edits.
 ---
 
 # Simplify
@@ -17,9 +17,11 @@ Look at what changed recently:
 
 If the diff is large or you're unsure where to focus, ask the user before reading the whole thing.
 
+Done when every hunk in the diff has been run through the diagnostics below.
+
 ## The method
 
-Don't just run a rubric. For each change, ask the diagnostic questions below. If you can't answer "yes, definitely" to the question, it's a finding.
+Interrogate each change with the diagnostic questions below. A finding is any question you can't answer "yes, definitely". For diagnostics 1, 3, and 5, verify caller counts with a search — never answer from the diff alone.
 
 ### 1. Premature abstraction
 
@@ -35,7 +37,7 @@ For each prop, option, or parameter: **does any caller pass a non-default value?
 
 ### 4. Derived state pretending to be state
 
-For each `useState` + `useEffect` pair that syncs from another value: **could this be a `useMemo`, a `key` prop, or just inline computation?** Effects that mirror props or other state are almost always wrong in React.
+For each piece of state synced from another value: **could this be computed at the use-site instead?** (React: a `useState` + `useEffect` pair mirroring props is almost always a `useMemo`, a `key` prop, or inline computation.)
 
 ### 5. Wrapper layers
 
@@ -49,15 +51,21 @@ For each consolidation of "similar" code: **are the callers solving the same pro
 
 Code paths marked "shouldn't happen", legacy compatibility shims with no caller, commented-out blocks, TODOs with no owner — all candidates for removal.
 
+### 8. Code orphaned by the change
+
+For each replaced or rerouted code path: **does the old path still have a caller?** The diff can make pre-existing code dead — a superseded branch, a helper whose last caller just left. Search for it; authors miss this class most.
+
 ## Output
 
-Produce a findings list, **don't edit**. The user discusses architectural decisions before implementation (see their CLAUDE.md). Format each finding:
+Produce a findings list, **don't edit**. Format each finding:
 
 - **Location** — `file:line` or function name
 - **Finding** — what's over-engineered, in one sentence
 - **Why it's noise** — which diagnostic question it fails
 - **Suggested cut** — concrete change (delete, inline, replace with X)
 - **Severity** — `cut` (clearly dead), `consider` (judgment call), `flag` (worth a thought)
+
+Note in each finding whether the cut is behavior-preserving; if it isn't, cap severity at `consider`.
 
 Group by severity, `cut` first. If nothing meaningful is wrong, say so plainly — don't manufacture findings to look thorough. A clean diff is a valid result.
 
@@ -77,4 +85,4 @@ This skill is specifically for _reducing surface area_. Redirect when the ask is
 - Pre-commit polish on staged changes → `aa-commit-review`
 - Architecture critique / design questions → consult Oracle in `plan` mode
 
-The honest path: if you have nothing to cut, recommend a different skill or say "this is fine."
+If the ask fits but you have nothing to cut, that's the clean-diff result from Output above.
