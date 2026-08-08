@@ -390,7 +390,7 @@ After all items verify, run the review loop. It brackets the run's work in **two
 
 ### 1. Commit the implementation
 
-Commit the run's implementation now with the `commit-me` skill, staging exactly the manifest files from Phase 4 — baseline-dirty and sibling-run files stay out. This gives the reviewer an exact diff target instead of a fuzzy dirty tree, and closes the window where staged files can be swept into a concurrent session's commit. On a working branch an intermediate commit with findings-still-to-fix is harmless; squash at PR time if it matters.
+Commit the run's implementation now with the `commit-me` skill, staging exactly the manifest files from Phase 4 — baseline-dirty and sibling-run files stay out. This gives the reviewer an exact diff target instead of a fuzzy dirty tree, and closes the window where staged files can be swept into a concurrent session's commit. On a working branch an intermediate commit with findings-still-to-fix is harmless; squash at PR time if it matters. Committing on `main` is fine — branch choice is the user's responsibility, made before the run starts. But the commit may trigger a permission approval, and an unattended run idles until the prompt times out; if this run is on `main`, ask the user to pre-authorize the commits when you enter Phase 5, not when the gate fires.
 
 ### 2. Dispatch the cold reviewer
 
@@ -428,7 +428,9 @@ Reviewers routinely withdraw findings under specific questioning — ask before 
 
 ### 4. Apply, commit the fixes, report
 
-Per the skill's orchestrated mode: apply `apply` and `reframe` verdicts immediately (as narrow fresh agents for behavioral or multi-file fixes; directly for mechanical few-file ones), hold everything else for the rollup. Verify with the project's quality gates.
+Per the skill's orchestrated mode: apply `apply` and `reframe` verdicts immediately (as narrow fresh agents for behavioral or multi-file fixes; directly for mechanical few-file ones), hold everything else for the rollup.
+
+**Verify review fixes against the affected module's full test suite, not just the fix's own focused tests.** A review fix is the change most likely to collide with contracts the reviewer never saw — the cold read's blindness cuts both ways. A fix that breaks an existing test is the skill's revert-and-`reject` case: revert it, record the broken contract as the concrete fact, and move the finding to `reject` in the rollup. Then run the project's quality gates.
 
 Include in the final rollup: the full verdict table, what was applied, and the held findings (`reject`/`defer`/`invalid`) with one-line reasons so the user can push back.
 
