@@ -5,23 +5,23 @@ description: Use whenever the user wants a critical second-pass focused on cutti
 
 # Simplify
 
-A critical second-pass on recent code changes, biased toward **removal**. The author just wrote this code and is biased toward keeping it; your job is to read it cold and ask what actually survives scrutiny. Treat the iteration history as a _liability_, not credit — early decisions ossify and stop being questioned.
+A critical second-pass on recent code changes, biased toward **removal**. The author just wrote this code and is biased toward keeping it; the reviewer's job is to read it cold and ask what actually survives scrutiny. Treat the iteration history as a _liability_, not credit — early decisions ossify and stop being questioned.
 
 ## Scope
 
-Look at what changed recently:
+If the user already named a comparison target ("simplify this branch", "the last 3 commits", a path, a PR), use it and skip confirmation. Otherwise resolve in order:
 
-- Default: `git diff` + `git diff --staged` (uncommitted work)
-- If both are empty, look at the most recent commit
-- If still nothing or the user named a path/PR, use that
+- `git diff` + `git diff --staged` (uncommitted work) — the default
+- If both are empty: the most recent commit
+- If the branch is ahead of trunk and the uncommitted diff is trivial: offer branch-vs-main
 
-If the diff is large or you're unsure where to focus, ask the user before reading the whole thing.
+If the diff is large or the right target is genuinely ambiguous, ask the user before reading the whole thing.
 
-Done when every hunk in the diff has been run through the diagnostics below.
+Done when every hunk in the scoped diff has been run through the diagnostics below.
 
-## The method
+## The diagnostics
 
-Interrogate each change with the diagnostic questions below. A finding is any question you can't answer "yes, definitely". For diagnostics 1, 3, and 5, verify caller counts with a search — never answer from the diff alone.
+A finding is any question you can't answer "yes, definitely".
 
 ### 1. Premature abstraction
 
@@ -53,11 +53,23 @@ Code paths marked "shouldn't happen", legacy compatibility shims with no caller,
 
 ### 8. Code orphaned by the change
 
-For each replaced or rerouted code path: **does the old path still have a caller?** The diff can make pre-existing code dead — a superseded branch, a helper whose last caller just left. Search for it; authors miss this class most.
+For each replaced or rerouted code path: **does the old path still have a caller?** The diff can make pre-existing code dead — a superseded branch, a helper whose last caller just left. Authors miss this class most.
+
+## The engine
+
+Diagnostics 1, 3, 5, and 8 hinge on callers *outside* the diff — they can never be answered from the diff alone.
+
+**Primary path (RepoPrompt available):** run `context_builder` with `response_type: "review"`. Its discovery pulls in the out-of-diff callers wholesale. Embed the removal bias in the instructions — include all eight diagnostics verbatim in the `<task>`, plus:
+
+> Bias toward removal. Report only cuts — code that should be deleted, inlined, or collapsed. A suggestion to *add* anything (guards, handling, abstraction, tests) is out of scope for this review.
+
+State the confirmed comparison scope in `<context>`. When the oracle's findings come back, verify each against the actual diff before reporting it — the oracle proposes, you confirm. Follow up in the same chat (`ask_oracle`, `new_chat: false`) for anything unclear.
+
+**Fallback (no RepoPrompt tools):** run the diagnostics yourself over the diff, and verify caller counts for 1, 3, 5, and 8 with a search — never answer them from the diff alone.
 
 ## Output
 
-Produce a findings list, **don't edit**. Format each finding:
+Produce a findings list, **don't edit**. Cap at ~10 findings, worst first — ranking is part of the review; a triaged shortlist beats an exhaustive dump. Format each finding:
 
 - **Location** — `file:line` or function name
 - **Finding** — what's over-engineered, in one sentence
