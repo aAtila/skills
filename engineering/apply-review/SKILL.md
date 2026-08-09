@@ -58,6 +58,8 @@ Assign every finding exactly one verdict:
 >
 > Not sufficient: "this is intentional", "I prefer it this way", "the current approach is fine", "it's more readable", "consistent with the existing style" (unless you name the existing code).
 >
+> **"The plan says so" is not a fact by itself.** A plan decision made during this same run counts only if you can also name what the plan derived it from — the requirement, the caller, the test, the measurement beneath it. The plan is your own artifact; citing it against a reviewer is circular. If the reviewer's suggestion is genuinely better than the plan's decision, the plan is what's wrong: verdict is `apply` or `reframe`, and update the plan text to match.
+>
 > **If you cannot name the fact, you don't have context the reviewer lacks — you have a preference. Apply the fix.**
 
 `reframe` is the most common honest outcome and is underused. Reviewers are much better at spotting problems than prescribing fixes. Reaching for `reject` when the reviewer correctly identified a real problem is the most damaging failure mode of this skill — it discards a true finding on a technicality about the proposed solution.
