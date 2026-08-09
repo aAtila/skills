@@ -37,11 +37,11 @@ Score every item against every heuristic in the rubric below, from spec text alo
 
 ### Tier → dispatch mapping
 
-Each tier resolves to a concrete invocation, so a verdict row reads "run this", not just a label. These name the currently installed toolbox — substitute the closest installed equivalent if a name has moved.
+Each tier resolves to one of the four installed implementation modes, so a verdict row reads "run this", not just a label — substitute the closest installed equivalent if a name has moved.
 
-- **inline** → do it in this session now.
-- **single agent** → `agent_run` with `model_id="engineer"` and a self-contained brief; add "load the `tdd` skill and build at seam `<seam>`" when the TDD-fit heuristic says the item gains from test-first.
-- **agent + review** → `agent_run` with `model_id="pair"`, then a cold review (`aa-second-opinion`, or a fresh `design` agent with the Review workflow) triaged warm via `apply-review`.
+- **inline** → do it in this session now, no preparation.
+- **single agent** → one of two modes, chosen by the TDD-fit heuristic: the **Builder Mode** workflow (`build.md` — orientation, `context_builder` plan, implement, oracle on gaps) when the item's value is plan quality and context; the `tdd` skill (red→green loop at a pre-agreed seam) when the item has a nameable seam and gains from test-first. Name the seam in the row when recommending `tdd`.
+- **agent + review** → the same mode choice as single agent, plus a cold review pass (`aa-second-opinion`, or a fresh `design` agent with the Review workflow) triaged warm via `apply-review`.
 - **orchestrate** → the **Orchestrate (TDD)** workflow, seeded with the epic reference; when step 4 fired, one orchestrate run over the whole set replaces per-item runs.
 - Prefacing any tier: recommend `tidy-first` when the item needs its landing zone prepared, and **Deep Plan (TDD)** when an item's spec is too thin to dispatch from.
 
@@ -63,9 +63,8 @@ Present the dispatch plan:
 
 1. **Headline** — the overall shape (per step 4), and the single most load-bearing caution first: the item the user is most likely to mis-weight, named with why.
 2. **Table** — one row per item: item → verdict tier → one-line reason → concrete invocation (per the tier → dispatch mapping) → sequencing note (blocked-by / establishes-pattern-for).
-3. **Spec corrections** — every spec-vs-codebase discrepancy the probes surfaced (wrong counts, false acceptance criteria, contradicted prior art), each with the file evidence and which item's brief must carry the correction. These are the probes' yield — a discrepancy left out of the plan gets re-discovered mid-implementation by an agent without the context to judge it.
-4. **Disagreement line** — disagree with a process weight the user actually stated or implied, quoting the evidence. Implied weights live in metadata too, not just prose: labels (`ready-for-agent`), assignees, and milestones all assert a process weight — read them before concluding none was implied. If none exists anywhere, say so plainly. Agreement-by-default is the failure this skill exists to prevent — and so is inventing an implied weight just to have something to contest. Only calibrated agreement, and calibrated disagreement, count.
+3. **Spec corrections** — every spec-vs-codebase discrepancy the probes surfaced (wrong counts, false acceptance criteria, contradicted prior art), each with the file evidence and which item's brief must carry the correction. A process weight asserted in metadata that the item doesn't earn counts too — a label like `ready-for-agent` on a spec that leaves real decisions unmade is a discrepancy, quoted like any other. These are the probes' yield — a discrepancy left out of the plan gets re-discovered mid-implementation by an agent without the context to judge it.
 
-Done when every item has a verdict, a reason, and a suggestion; every probe-found discrepancy is listed with its owning item; and the disagreement line is present.
+Done when every item has a verdict, a reason, and a suggestion, and every probe-found discrepancy is listed with its owning item.
 
 On request only: post the table as a comment on the epic.
