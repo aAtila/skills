@@ -41,7 +41,7 @@ Set this once, up front, before any exploration or dispatch. Don't rename mid-ru
 Two cheap captures before anything else:
 
 - **Baseline** — `git op=status`. The pre-existing dirty files are the baseline; everything the run later diffs, commits, or reverts is measured against it. Files dirty at baseline belong to someone else — leave them out of this run's commits.
-- **Caveats ledger** — if the repo keeps one (look for `docs/known-caveats.md`), read it. It lists environment quirks past runs already diagnosed — pre-existing lint failures, sandbox restrictions, unavailable services. Treat a listed quirk as known: acknowledge it in one line and move on instead of re-diagnosing it.
+- **Caveats ledger** — if the repo keeps one (look for `docs/known-caveats.md`), read it. It lists environment quirks past runs already diagnosed — pre-existing lint failures, sandbox restrictions, unavailable services. Treat entries as **checkable claims, not standing facts** — someone may have fixed the quirk since it was recorded. When a run later hits a failure and wants to attribute it to a ledger entry, the match must be **exact** against the entry's recorded signature (same count, same suites); a partial match is not "known", it's a diff to investigate — otherwise a stale entry masks a real regression this run introduced. On an exact match, acknowledge in one line and move on instead of re-diagnosing.
 
 Then translate the user's prompt into the codebase's actual nouns — concrete modules, filenames, patterns — so builder can focus immediately instead of disambiguating. 1-2 navigation calls (tree or search) is usually enough.
 
@@ -380,7 +380,7 @@ After all items complete, give the user a **final rollup**:
 - Any failures or partial completions
 - Any conflicts or coordination issues that surfaced
 - Suggested follow-ups if anything was deferred
-- Any environment quirk this run diagnosed that the caveats ledger doesn't list — append it to the ledger (create `docs/known-caveats.md` if the repo lacks one) so the next run reads it instead of rediscovering it
+- Any environment quirk this run diagnosed that the caveats ledger doesn't list — append it to the ledger (create `docs/known-caveats.md` if the repo lacks one) so the next run reads it instead of rediscovering it. Each entry records the symptom, a repro command, the expected signature (e.g. "28 failures, these suites"), and the date observed — an entry that can't be stated checkably doesn't belong in the ledger. And prune: if a listed quirk **didn't** reproduce when its gate ran this run (the lint passed, the suite was green), someone fixed it — delete the entry in the same pass that appends new ones
 
 ---
 
