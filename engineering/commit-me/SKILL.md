@@ -60,6 +60,7 @@ Rules:
 - The body explains **why**, not what — the diff already shows what.
 - **Do not** list modified files in the body. Git already tracks this via `git show --stat`, `git log --name-status`, and `git diff --stat`. Duplicating it goes stale and bloats history.
 - **Do not** include `Co-Authored-By`, "Generated with…", or any other attribution footer.
+- **Issue reference (optional):** if the issue number can be confidently determined — the user mentioned it in the conversation, or the branch name encodes it (`123-fix-login`, `fix/issue-123`, `feature/GH-123`) — add a final line `Refs #123` after the body, separated by a blank line. Always use `Refs`, never `Closes`/`Fixes` (issues are triaged and closed manually after implementation). If the number can't be confidently determined, skip this line silently — don't ask and don't guess.
 
 For multi-line messages, prefer a HEREDOC when invoking `git commit -m` later, so newlines survive shell quoting:
 
