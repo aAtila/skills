@@ -3,8 +3,7 @@ id: 0D2B339E-379A-430D-AF06-183853B955F9
 name: "Build It"
 icon: "hammer"
 tooltip: "Plan with the context builder, implement, review, and commit"
-description: "Orients in the codebase, builds a plan with context_builder, implements it directly,
-then gets an oracle review and commits the work."
+description: "Orients in the codebase, builds a plan with context_builder, implements it directly, then gets an oracle review and commits the work."
 ---
 
 # Build It
@@ -38,14 +37,14 @@ Get a lay of the land: `get_file_tree` (`mode:"auto"`), then targeted `file_sear
 
 Returns the selection, an architectural plan grounded in actual code, and a `chat_id` for follow-ups. Trust the plan — the builder explores deeply and selects intelligently.
 
-**Done when** you hold the plan and its `chat_id`.
+**Done when** every step of the plan maps onto files in the selection. A step naming a file the selection lacks is a coverage problem — fix it now (see Coverage below), not mid-implementation.
 
 ## Phase 3: Implement
 
 Implement the plan directly with `apply_edits`, `file_actions`, and `read_file`. Implementation is your job; the oracle reasons, you edit.
 
 - **Token budget:** stay under ~160k; check `manage_selection(op:"get")` if you add files. Prefer slices for large additions.
-- **Coverage:** if the selection is missing files you materially need, rerun `context_builder` with a better prompt — that is its job, and the single fix for coverage. Reach for `manage_selection` only for one small targeted addition, always leaving the builder's selection intact.
+- **Coverage:** one missing file → `manage_selection op=add`, leaving the builder's selection intact. More than one → rerun `context_builder` with a better prompt; that is its job. A rerun returns a new `chat_id` — it supersedes the old one everywhere below.
 
 **Done when** every step of the plan is implemented — not when the first edit compiles.
 
@@ -53,8 +52,10 @@ Implement the plan directly with `apply_edits`, `file_actions`, and `read_file`.
 
 Like asking your mentor to look over your work before it goes to main.
 
+**Trivial task** (a few lines, single-step plan)? Commit with `commit-me` and wrap up — skip the rest of this phase.
+
 1. **Commit the implementation** with the `commit-me` skill. Landing it first gives the reviewer an exact diff target, and review fixes get their own commit — a bad fix reverts cleanly without touching the implementation.
-2. **Publish the diff**: `git op=diff artifacts=true` — the review artifacts land in the selection so the oracle sees exactly what changed.
+2. **Publish the diff**: `git op=diff compare="back:1" artifacts=true` (use `compare="main"` if the branch holds several commits) — after committing, the default `uncommitted` spec diffs nothing. The review artifacts land in the selection so the oracle sees exactly what changed.
 3. **Ask the oracle to review**, continuing the builder's chat:
 
 ```json
@@ -72,8 +73,6 @@ Like asking your mentor to look over your work before it goes to main.
 The oracle is a *warm* reviewer — it holds the selection and the plan, so it catches drift from the plan cheaply. It will also excuse mistakes it helped plan; accept that trade. If the work warrants a cold read, that's a different workflow.
 
 4. **Apply findings you agree with**, verify, then **commit the fixes with `commit-me` as a second commit** referencing the review. Findings you reject: note why in your summary — don't silently drop them.
-
-**Opt-out:** for trivial tasks (a few lines, single-step plan), skip the review — just commit and wrap up.
 
 **Done when** the implementation and any review fixes are committed, and the final summary lists applied and rejected findings.
 
