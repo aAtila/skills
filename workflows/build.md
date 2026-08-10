@@ -17,6 +17,26 @@ Two words carry this workflow:
 - **The selection** — the files `context_builder` curated. The oracle sees the selection completely (full content) and sees only the selection.
 - **A gap** — a concrete, nameable question the plan plus reading the selection cannot answer. A gap is something you can state in one sentence ("how do X and Y connect across these files?"). Vague unease is not a gap — read the selection first.
 
+## Phase 0: Name the Session (REQUIRED — first action)
+
+Before anything else, call `set_status` to name this session:
+
+```
+BUILD #<issue>: <short title>
+```
+
+- **`BUILD`** — always uppercase, always first, so builder sessions sort and scan together.
+- **`#<issue>`** — the issue/ticket number when the request names one. **Omit the segment entirely if there is none** — don't invent one, don't write `#TBD`.
+- **`<short title>`** — a few words in the codebase's own terms, not a restatement of the whole request.
+
+```json
+{"tool":"set_status","args":{"session_name":"BUILD #123: retry logic in NetworkService"}}
+```
+
+With no issue number: `BUILD: retry logic in NetworkService`.
+
+Set this once, up front. Don't rename mid-run unless the scope genuinely changes. One exception: `context_builder` overwrites this name with its chat title — Phase 2 re-asserts the identical string. That's a restore, not a rename.
+
 ## Phase 1: Orientation
 
 Get a lay of the land: `get_file_tree` (`mode:"auto"`), then targeted `file_search` / `get_code_structure` probes on key terms from the task. Skim paths and signatures; full file contents come after the builder selects them.
@@ -36,6 +56,12 @@ Get a lay of the land: `get_file_tree` (`mode:"auto"`), then targeted `file_sear
 ```
 
 Returns the selection, an architectural plan grounded in actual code, and a `chat_id` for follow-ups. Trust the plan — the builder explores deeply and selects intelligently.
+
+**Re-assert the session name immediately after this call** — `context_builder` renames the session to its chat title. Pass the byte-identical string from Phase 0:
+
+```json
+{"tool":"set_status","args":{"session_name":"BUILD #123: retry logic in NetworkService"}}
+```
 
 **Done when** every step of the plan maps onto files in the selection. A step naming a file the selection lacks is a coverage problem — fix it now (see Coverage below), not mid-implementation.
 
