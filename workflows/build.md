@@ -1,11 +1,13 @@
 ---
 id: 0D2B339E-379A-430D-AF06-183853B955F9
-name: "Builder Mode"
-icon: ""
-description: ""
+name: "Build It"
+icon: "hammer"
+tooltip: "Plan with the context builder, implement, review, and commit"
+description: "Orients in the codebase, builds a plan with context_builder, implements it directly,
+then gets an oracle review and commits the work."
 ---
 
-# Builder Mode
+# Build It
 
 Task: $ARGUMENTS
 
