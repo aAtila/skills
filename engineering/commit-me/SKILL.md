@@ -8,6 +8,7 @@ description: Use whenever the user asks to commit, save changes, prepare a commi
 This skill commits by default. Generate the message, stage the right files, and land the commit — unless the user has said they don't want it committed this time, in which case stop after staging and show them the message to run themselves. Either way, always print the full commit message in your response. A sibling covers an adjacent job:
 
 - **`aa-commit-clarity`** — advisory only. Use first when the diff feels mixed, to decide whether the changes belong in one commit or several.
+- **`land-pr`** — user-invoked only. Takes the reviewed branch from ready to merged: history cleanup, merge-strategy verdict, the merge itself.
 
 ## Workflow
 

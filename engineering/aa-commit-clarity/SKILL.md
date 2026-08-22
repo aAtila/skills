@@ -5,7 +5,7 @@ description: Decide whether a mixed diff is one commit or several. Use when the 
 
 # Commit Clarity
 
-Advisory only — recommends commit boundaries, then hands off to `aa-commit`. Reach for it when a diff spans more than one obvious concern.
+Advisory only — recommends commit boundaries, then hands off to `aa-commit`. Reach for it when a diff spans more than one obvious concern. The same judgment applied retroactively to an already-committed series, before merging, is `land-pr` (user-invoked).
 
 ## 1. Read the actual diff
 

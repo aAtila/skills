@@ -186,4 +186,4 @@ git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null
 
 If that command fails (no upstream configured), mention it — *"Branch isn't pushed yet — `git push -u origin <branch>` first."* — but don't run `git push` yourself. Atila pushes on his own terms.
 
-One boundary not covered above: this skill **describes** the branch, it doesn't reshape it — no amend, rebase, squash, or reword. The branch is what it is.
+One boundary not covered above: this skill **describes** the branch, it doesn't reshape it — no amend, rebase, squash, or reword. Reshaping and landing — history cleanup, merge-strategy verdict, the merge itself — is `land-pr`'s job (user-invoked), after review.
