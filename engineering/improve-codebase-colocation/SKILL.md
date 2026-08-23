@@ -1,6 +1,7 @@
 ---
 name: improve-codebase-colocation
 description: Find placement and organization opportunities in a codebase, measured against the colocation-first conventions. Use when the user wants to improve code organization, colocate a feature scattered across technical folders (src/services, src/model, src/hooks, src/store), pull route-specific code back under its route, kill barrels, fix premature promotion to shared modules, rename vague *.utils.ts files, or make a codebase more colocated and AI-navigable. This is the audit counterpart to colocation-first (which places code as you write it).
+disable-model-invocation: true
 ---
 
 # Improve Codebase Colocation
