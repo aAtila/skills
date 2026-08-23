@@ -116,6 +116,6 @@ Do not commit unless asked.
 
 ## When this is the wrong fit
 
-- Getting a review in the first place → `aa-second-opinion`, `aa-review-codex`, `autoreview`
+- Getting a review in the first place → `aa-second-opinion`
 - Cutting over-engineering → `aa-simplify`
 - Review findings that amount to a redesign → stop and consult Oracle in `plan` mode; this skill applies changes, it doesn't re-architect

@@ -93,8 +93,8 @@ Group by severity, `cut` first. If nothing meaningful is wrong, say so plainly �
 
 This skill is specifically for _reducing surface area_. Redirect when the ask is different:
 
-- General review (bugs, correctness, security) → `aa-review-superpower` or `aa-second-opinion`
-- Pre-commit polish on staged changes → `aa-commit-review`
+- General review (bugs, correctness, security) → `aa-second-opinion`
+- Commit boundaries (one commit or several) → `aa-commit-clarity`
 - Architecture critique / design questions → consult Oracle in `plan` mode
 
 If the ask fits but you have nothing to cut, that's the clean-diff result from Output above.

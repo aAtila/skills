@@ -1,11 +1,11 @@
 ---
 name: aa-commit-clarity
-description: Decide whether a mixed diff is one commit or several. Use when the user asks how to commit a change, whether it's one commit or many, or to split a diff up — and before `aa-commit` on a large or multi-concern change.
+description: Decide whether a mixed diff is one commit or several. Use when the user asks how to commit a change, whether it's one commit or many, or to split a diff up — and before `commit-me` on a large or multi-concern change.
 ---
 
 # Commit Clarity
 
-Advisory only — recommends commit boundaries, then hands off to `aa-commit`. Reach for it when a diff spans more than one obvious concern. The same judgment applied retroactively to an already-committed series, before merging, is `land-pr` (user-invoked).
+Advisory only — recommends commit boundaries, then hands off to `commit-me`. Reach for it when a diff spans more than one obvious concern.
 
 ## 1. Read the actual diff
 
@@ -46,4 +46,4 @@ Stay on commit strategy — don't propose code changes unless the structure depe
 
 ## Handoff
 
-Wait for the user to decide. On a split, hand each chunk to `aa-commit` in turn, staging only that chunk's files — never `git add -A` — until the tree is clean. On a single commit, hand off once.
+Wait for the user to decide. On a split, hand each chunk to `commit-me` in turn, staging only that chunk's files — never `git add -A` — until the tree is clean. On a single commit, hand off once.

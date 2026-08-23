@@ -84,7 +84,7 @@ A clean suite is a valid result. Don't manufacture findings to look thorough.
 | --------------------------------- | ---------------------------------- | ---------------------------------------------------------- |
 | Write tests test-first            | `tdd`                              | It writes; this judges and feeds it gaps.                  |
 | A manual acceptance walkthrough   | `qa-plan`                          | Intent-first, human-run; this is code-contract, static.    |
-| Review non-test code too          | `aa-second-opinion` / `autoreview` | General diff review; this is the test lens.                |
+| Review non-test code too          | `aa-second-opinion`                | General diff review; this is the test lens.                |
 | Cut over-engineered code          | `aa-simplify`                      | Removal-biased; shares the read-cold, findings-only shape. |
 
 ## Before you hand over
