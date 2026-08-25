@@ -8,7 +8,7 @@ The day-to-day coding companions. One line each; the SKILL.md is the source of t
 |---|---|---|
 | `aa-commit-clarity` | Decides whether a mixed diff is one commit or several. | "should this be one commit or two?" |
 | `commit-me` | Formats, stages, writes a conventional message, commits. | "commit this" |
-| `aa-pr-message` | Drafts PR title + body from the branch's commits; stops at the clipboard. | "what should the PR title and message be?" |
+| `draft-pr` | Drafts PR title + body from the branch's commits; stops at the clipboard. | "what should the PR title and message be?" |
 
 ## Review & second passes
 

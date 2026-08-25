@@ -29,7 +29,7 @@ PLAN       to-prd (new/complex feature) ─or─ skip PRD for small tasks → to
 PREPARE    legacy-seams (if blast radius untested) → tidy-first (warm-up on existing code)
 BUILD      tdd, issue by issue (red → green → refactor)
 VERIFY     review (see routing rule) → qa-plan (realistic UX flows — additive to unit tests, not a replacement)
-SHIP       commit-me → aa-pr-message
+SHIP       commit-me → draft-pr
 MAINTAIN   improve-codebase-architecture / improve-codebase-colocation, fed by hotspot-analysis
            language-drift (periodic glossary↔code alignment sweep)
 ```
@@ -376,7 +376,7 @@ refactoring). It's a real chunk of weekly engineering work with no skill today.
 
 **Pipeline position:** Standalone track, parallel to the feature pipeline. Receives from:
 the user directly ("upgrade Next to 16", "replace moment with date-fns"), or `improve` /
-`hotspot-analysis` findings. Hands off to `commit-me` per step and `aa-pr-message` at the end.
+`hotspot-analysis` findings. Hands off to `commit-me` per step and `draft-pr` at the end.
 If the migration surface is untested → `legacy-seams` first (same keystone hand-off as
 `refactor-catalog`).
 
@@ -420,7 +420,7 @@ boundary); `legacy-seams` (precondition supplier when the surface is untested).
 places future sessions actually read — CONTEXT.md, ADRs, qa-plan flows, and the issue tracker —
 so `grill-with-docs` keeps grilling against reality instead of stale docs.
 
-**Why it exists:** The pipeline currently ends at `aa-pr-message`. Without a closing step,
+**Why it exists:** The pipeline currently ends at `draft-pr`. Without a closing step,
 domain language drifts, decisions made mid-implementation never become ADRs, and the docs that
 power the ALIGN phase decay. This skill is the flywheel that keeps the whole system honest.
 
@@ -455,7 +455,7 @@ CONTEXT.md term; rejected case — "let's also reorganize all the ADR files" (fa
 gate); wrong-skill case — "the feature is buggy in prod" → `diagnose`, not a retro item.
 
 **Boundaries:** `grill-with-docs` (consumes the docs this skill maintains; that one updates docs
-*before* building, this one *after* shipping); `aa-pr-message` (describes the change outward;
+*before* building, this one *after* shipping); `draft-pr` (describes the change outward;
 this records learnings inward); `to-issues` (this routes deferred work to it); `diagnose`
 (production misbehavior is a bug, not a learning).
 

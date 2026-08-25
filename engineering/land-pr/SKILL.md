@@ -12,7 +12,7 @@ Takes a reviewed branch from "ready" to "landed", with two gates and one early e
 2. **Rewrite** — on go-ahead, clean the history so every retained commit is a valid state, then update the remote branch.
 3. **Land** — on a second confirmation, merge and delete the feature branch.
 
-Runs only when Atila invokes it by name — the rewrite never starts from another skill's flow. Siblings cover the adjacent jobs: `commit-me` lands a single commit, `aa-commit-clarity` decides boundaries for an uncommitted diff, `aa-pr-message` describes the branch without reshaping it. This skill is the reshaping-and-landing step that runs after the PR has been reviewed.
+Runs only when Atila invokes it by name — the rewrite never starts from another skill's flow. Siblings cover the adjacent jobs: `commit-me` lands a single commit, `aa-commit-clarity` decides boundaries for an uncommitted diff, `draft-pr` describes the branch without reshaping it. This skill is the reshaping-and-landing step that runs after the PR has been reviewed.
 
 ## Judgment: the three jobs of history
 

@@ -1,5 +1,5 @@
 ---
-name: aa-pr-message
+name: draft-pr
 description: Drafts a PR/MR title and markdown body from a branch's commits. Stops at the clipboard by default — for the user to review and paste into `gh pr create`, `glab mr create`, or the web UI; opens the PR/MR itself only when the invoker explicitly says to. Never pushes. Use when the user wants PR copy — a title and/or description for a branch they're about to open — or asks to draft and open the PR in one go. Sibling of `commit-me`/`aa-commit-clarity`/`land-pr`.
 ---
 
