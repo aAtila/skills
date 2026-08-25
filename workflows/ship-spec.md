@@ -3,7 +3,7 @@ id: 938BD461-A83C-4983-AD85-EFC89197882B
 name: "Ship Spec"
 icon: "checklist"
 tooltip: "Walk a spec's ticket graph and ship it as one PR"
-description: "Fetches a spec issue and its tickets from GitHub or GitLab, walks the dependency frontier, dispatches each ticket through the Build It workflow, verifies and closes tickets as they land, then cold-reviews the branch and opens the PR."
+description: "Fetches a spec issue and its tickets from GitHub or GitLab, walks the dependency frontier, dispatches each ticket through the Build It workflow, verifies and closes tickets as they land, then cold-reviews the branch, drafts the PR for the user to open, and posts a cold run retrospective."
 ---
 
 # Ship Spec
@@ -39,7 +39,7 @@ All tracker commands come from the _Tracker adapter_ section at the end of this 
 1. **Fetch the spec and its tickets.** Read the spec body, enumerate its tickets, and for each ticket read: state, labels, acceptance criteria, blocking edges. Tickets labeled `HITL` or `ready-for-human` are **human tickets** — they gate the graph like any other but are worked by the user, never dispatched.
 2. **Validate the graph.** Every blocking edge resolves to a ticket in the spec; no cycles. A malformed graph is a pause.
 3. **Resume check.** Look for a notes issue linked from the spec (titled `Notes: <spec title>`). Finding one means a previous run was interrupted: read its ledger back, verify integrity — every closed ticket's recorded commit SHA is reachable on the remote spec branch — then adopt the branch and skip to Phase 3. An integrity mismatch (ticket closed, commit missing) is a pause: tracker and branch disagree, the user decides.
-4. **Baseline.** `git op=status`. A dirty working tree is a pause. The clean baseline is what the abort path diffs against.
+4. **Baseline.** `git op=status`. A dirty working tree is a pause. The clean baseline is what the abort path diffs against. Record which quality gates are runnable in this environment (full suite, typecheck, lint; note suites needing unavailable services). That recorded list — not a child's judgment or yours — is what **green** means for every sanity pass and dispatch: unavailable-by-baseline suites don't block, newly-failing ones do.
 5. **Spec branch.** The run lives on `spec/<number>-<slug>`, branched off the default branch. Already on a branch carrying the spec number → adopt it. Otherwise create and check it out.
 
 **Done when** you hold the full ticket table (id, title, ACs, blockers, human/agent), the graph validates, and HEAD is on the spec branch.
@@ -97,13 +97,19 @@ The brief is pointers plus scope:
 > Fetch the notes issue <ref> the same way: research notes for context, the Ledger section for what previous tickets already landed.
 > _(TDD tickets only:)_ Follow the `tdd` skill (installed globally under `~/.agents/skills/tdd`) — load it before you start. Build at this seam: `<seam>`. It's already confirmed — treat it as settled. If it looks wrong, stop and report back rather than choosing another one.
 > You are on branch `spec/<number>-<slug>` — commit your work there as Build It directs. Pushing and PRs belong to the orchestrator.
+> If you stop to report, leave your working tree exactly as it stands — the orchestrator owns any decision about uncommitted work.
 > Done when the ticket's acceptance criteria are implemented and committed. Report your commit SHAs and files changed.
 
 Use `engineer` instead of `pair` when the ticket is small and its path is obvious from the ACs alone.
 
 ### 3. Sanity pass
 
-When the child returns: new commits exist on the branch, the project's quality gates are green, and the reported files-changed manifest matches `git op=diff`. Record SHAs and manifest in the Ledger. Gaps → steer the same child (it holds the context); after **two** failed corrections, the ticket is **failed** — comment the state of things on the ticket, and continue with frontier tickets outside its downstream subtree. Dispatch onto a green tree only: a red tree halts the loop (pause).
+When the child returns: new commits exist on the branch, the Phase-1 recorded gates are green, and the reported files-changed manifest matches `git op=diff`. Record SHAs and manifest in the Ledger. Gaps → steer the same child (it holds the context); after **two** failed corrections, the ticket is **failed** — comment the state of things on the ticket, and continue with frontier tickets outside its downstream subtree. Dispatch onto a green tree only: a red tree halts the loop (pause).
+
+Two child-session mechanics:
+
+- **A child that pauses with its own question**: answer with `agent_run op=respond` choosing one of its advertised options. If none matches the user's decision, pick the least destructive option, then immediately steer with the full instruction. A question whose default discards work always gets an explicit answer, never a skip or timeout.
+- **A steer/wait handle can expire while its session is still alive.** On `Expired`, re-acquire via `agent_manage op=list_sessions` and steer the same session id — a live session keeps its context; re-dispatching a replacement loses it.
 
 ### 4. Push
 
@@ -124,7 +130,7 @@ The verifier closes on pass — that is what advances the frontier (and on GitHu
 
 ### 6. Bookkeeping
 
-Update the notes-issue Ledger row (status, SHAs, files), comment the commit SHAs on the closed ticket, and dismiss the verifier session (`agent_manage op=cleanup_sessions`). Keep implementer sessions until the run ends — a later steer may need them. Then recompute the frontier.
+Update the notes-issue Ledger row (status, SHAs, files) and comment the commit SHAs on the closed ticket. Keep all child sessions — implementers and verifiers — until the end of Phase 4: the retrospective reads them and a later steer may need them. Then recompute the frontier.
 
 **Done when** every ticket in the spec is closed and pushed, or the remaining open tickets are failed/blocked and the user has been paused for a decision.
 
@@ -147,13 +153,21 @@ Update the notes-issue Ledger row (status, SHAs, files), comment the commit SHAs
 
 Keep the brief to that sentence — naming decisions or constraints warms up the reviewer and defeats the cold read. Wait with `agent_run op=wait`.
 
-2. **Warm triage in this session** with the `apply-review` skill (orchestrated mode). Interrogate the reviewer by steering its session — one finding, one specific question per steer. Apply accepted fixes (narrow fresh agents for behavioural or multi-file fixes; directly for mechanical ones), verify against the affected modules' full test suites, and commit them with `commit-me` as their own commit. An architectural finding that invalidates closed tickets is a pause.
+2. **Warm triage in this session** with the `apply-review` skill (orchestrated mode). Interrogate the reviewer by steering its session — one finding, one specific question per steer. Expect one false-positive class: the cold reviewer cannot see intent, so a finding that contradicts an explicit spec decision is a challenge to answer with the spec's own text, not a defect to fix — have the reviewer amend its saved report when it withdraws one. Apply accepted fixes (narrow fresh agents for behavioural or multi-file fixes; directly for mechanical ones), verify against the affected modules' full test suites, and commit them with `commit-me` as their own commit. An architectural finding that invalidates closed tickets is a pause.
 
-3. **Push and open the PR** via the adapter: title from the spec, body linking the spec with `Closes #<spec>` and summarising per-ticket work (tickets are already closed — only the spec rides the PR). Open it ready for review: this is where the user's involvement begins.
+3. **Draft the PR with the `aa-pr-message` skill** (`~/.agents/skills/aa-pr-message` — load it, don't restate it), adding `Closes #<spec>` to the body (tickets are already closed — only the spec rides the PR). The skill stops at the clipboard by design; so do you: present title, body, and the ready `gh pr create --body-file` / `glab mr create` command, then `ask_user` — the user opens the PR or tells you to. This is where the user's involvement begins.
 
-4. **Rollup and cleanup.** Comment the rollup on the spec issue: per-ticket outcomes, failed/deferred work, review verdict table with held findings and one-line reasons. Post a final-state comment on the notes issue and close it. Dismiss remaining child sessions, delete stale `prompt-exports/` files from this run.
+4. **Rollup.** Comment the rollup on the spec issue: per-ticket outcomes, failed/deferred work, review verdict table with held findings and one-line reasons.
 
-**Done when** the PR is open, the notes issue is closed, and the rollup is posted.
+5. **Retrospective** — always, and cold: the orchestrator grading itself is the one thing this workflow refuses everywhere else. Export your own transcript (`agent_manage op=extract_handoff`, `output_path` in a temp location outside the repo) and dispatch a fresh agent whose brief is pointers only — this workflow file and that export:
+
+> Read the Ship Spec workflow at `<workflow path>` and the run transcript at `<export path>`. Audit this run against the workflow's own contract: pauses honored, frontier computed from the tracker, briefs pointer-only, ledger complete. Report traps (where the wording steered behaviour wrong or nearly did, with turn references), clean areas, and proposed workflow edits.
+
+Post the findings as the final comment on the notes issue under a `## Run retrospective` heading, opening with `Workflow: ship-spec | Spec: #<spec> | Session: <id> | Date: <date>`, add the `retro` label to the notes issue, then close it and delete the transcript export. The retro comments are the durable dataset a cross-run meta-audit reads later — the sessions themselves stay disposable.
+
+6. **Offer cleanup — never run it unprompted.** Final `ask_user`: "N child sessions from this run are still around — clean them up now, or leave them for a post-PR-review steer?" Default is leave them; the user can trigger cleanup later in one sentence. Also delete stale `prompt-exports/` files from this run.
+
+**Done when** the PR decision is with the user, the notes issue is closed with the retro comment, and the rollup is posted.
 
 ---
 
