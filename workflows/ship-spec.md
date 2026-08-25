@@ -3,7 +3,7 @@ id: 938BD461-A83C-4983-AD85-EFC89197882B
 name: "Ship Spec"
 icon: "checklist"
 tooltip: "Walk a spec's ticket graph and ship it as one PR"
-description: "Fetches a spec issue and its tickets from GitHub or GitLab, walks the dependency frontier, dispatches each ticket through the Build It workflow, verifies and closes tickets as they land, then cold-reviews the branch, opens the PR in draft-pr format, and posts a cold run retrospective."
+description: "Ship a spec's ticket graph as one PR: walk the dependency frontier on GitHub or GitLab, dispatch each ticket through Build It, cold-verify and close tickets as they land, then cold-review the branch, open the PR, and post a run retrospective."
 ---
 
 # Ship Spec
@@ -16,7 +16,7 @@ Three words carry this workflow:
 
 - **The frontier** — the open tickets whose blockers are all closed. Always computed fresh from the tracker, never from memory: the tracker is the source of truth for done/not-done, which is what makes a killed run resumable.
 - **The notes issue** — a tracker issue this run owns: research notes, the ticket→seam table, and the run ledger (per-ticket status, commit SHAs, file manifest). You write it; children and future resumed runs read it.
-- **A pause** — quality over quantity. On any trigger in the _Pause triggers_ list at the end of this document: stop, `ask_user`, idle until answered. The user would rather be asked than surprised.
+- **A pause** — stop, `ask_user`, idle until answered; resolve nothing marked _pause_ on your own. Pause sites are marked inline where they arise; the _Pause triggers_ list at the end holds the ones with no phase home. The user would rather be asked than surprised.
 
 Communicate with children through **context pointers** — ticket refs, the notes issue, commit SHAs — never by restating what a pointer already reaches.
 
@@ -95,7 +95,7 @@ The brief is pointers plus scope:
 
 > Your task is ticket <ref> — read it first (`gh issue view <n>` / `glab issue view <n>`), including its acceptance criteria. Implement exactly that ticket; other tickets in the spec are handled separately.
 > Fetch the notes issue <ref> the same way: research notes for context, the Ledger section for what previous tickets already landed.
-> _(TDD tickets only:)_ Follow the `tdd` skill (installed globally under `~/.agents/skills/tdd`) — load it before you start. Build at this seam: `<seam>`. It's already confirmed — treat it as settled. If it looks wrong, stop and report back rather than choosing another one.
+> _(TDD tickets only:)_ Follow the `tdd` skill — load it before you start. Build at this seam: `<seam>`. It's already confirmed — treat it as settled. If it looks wrong, stop and report back rather than choosing another one.
 > You are on branch `spec/<number>-<slug>` — commit your work there as Build It directs. Pushing and PRs belong to the orchestrator.
 > If you stop to report, leave your working tree exactly as it stands — the orchestrator owns any decision about uncommitted work.
 > Done when the ticket's acceptance criteria are implemented and committed. Report your commit SHAs and files changed.
@@ -155,7 +155,7 @@ Keep the brief to that sentence — naming decisions or constraints warms up the
 
 2. **Warm triage in this session** with the `apply-review` skill (orchestrated mode). Interrogate the reviewer by steering its session — one finding, one specific question per steer. Expect one false-positive class: the cold reviewer cannot see intent, so a finding that contradicts an explicit spec decision is a challenge to answer with the spec's own text, not a defect to fix — have the reviewer amend its saved report when it withdraws one. Apply accepted fixes (narrow fresh agents for behavioural or multi-file fixes; directly for mechanical ones), verify against the affected modules' full test suites, and commit them with `commit-me` as their own commit. An architectural finding that invalidates closed tickets is a pause.
 
-3. **Draft and open the PR** with the `draft-pr` skill (`~/.agents/skills/draft-pr` — load it, don't restate it), invoking its draft-and-open branch: this workflow's explicit instruction is to open. The branch name gives it the spec number for the `Closes` line (tickets are already closed — only the spec rides the PR). The user reviews the open PR on their own time; the run doesn't block here.
+3. **Draft and open the PR** with the `draft-pr` skill (load it, don't restate it), invoking its draft-and-open branch: this workflow's explicit instruction is to open. The branch name gives it the spec number for the `Closes` line (tickets are already closed — only the spec rides the PR). The user reviews the open PR on their own time; the run doesn't block here.
 
 4. **Rollup.** Comment the rollup on the spec issue: per-ticket outcomes, failed/deferred work, review verdict table with held findings and one-line reasons.
 
@@ -184,18 +184,12 @@ Abort is a first-class exit:
 
 ## Pause triggers
 
-`ask_user` and idle on any of these — resolve nothing on the list alone:
+These have no phase home but pause all the same:
 
 - Ambiguous or contradictory acceptance criteria on a ticket
-- Malformed graph: cycle, dangling blocker, ticket outside the spec
-- Dirty working tree at run start
-- Resume integrity mismatch: ticket closed, recorded commit missing from the remote
-- A seam you can't settle, or a child reporting its assigned seam looks wrong
-- A failed ticket with no agent-workable frontier remaining, or a stuck graph
-- A red tree the next dispatch would build on
-- Cold review finding that invalidates already-closed tickets
+- A child reporting its assigned seam looks wrong
+- A failed ticket with no agent-workable frontier remaining
 - Anything destructive or irreversible: force-push, data loss, deleting remote objects
-- Frontier holds only human tickets
 
 Everything else — a flaky test, a missing file, an unclear module — you resolve yourself or by steering the child that owns the context.
 
