@@ -3,7 +3,7 @@ id: 938BD461-A83C-4983-AD85-EFC89197882B
 name: "Ship Spec"
 icon: "checklist"
 tooltip: "Walk a spec's ticket graph and ship it as one PR"
-description: "Fetches a spec issue and its tickets from GitHub or GitLab, walks the dependency frontier, dispatches each ticket through the Build It workflow, verifies and closes tickets as they land, then cold-reviews the branch, drafts the PR for the user to open, and posts a cold run retrospective."
+description: "Fetches a spec issue and its tickets from GitHub or GitLab, walks the dependency frontier, dispatches each ticket through the Build It workflow, verifies and closes tickets as they land, then cold-reviews the branch, opens the PR in aa-pr-message format, and posts a cold run retrospective."
 ---
 
 # Ship Spec
@@ -155,7 +155,7 @@ Keep the brief to that sentence — naming decisions or constraints warms up the
 
 2. **Warm triage in this session** with the `apply-review` skill (orchestrated mode). Interrogate the reviewer by steering its session — one finding, one specific question per steer. Expect one false-positive class: the cold reviewer cannot see intent, so a finding that contradicts an explicit spec decision is a challenge to answer with the spec's own text, not a defect to fix — have the reviewer amend its saved report when it withdraws one. Apply accepted fixes (narrow fresh agents for behavioural or multi-file fixes; directly for mechanical ones), verify against the affected modules' full test suites, and commit them with `commit-me` as their own commit. An architectural finding that invalidates closed tickets is a pause.
 
-3. **Draft the PR with the `aa-pr-message` skill** (`~/.agents/skills/aa-pr-message` — load it, don't restate it); the branch name gives it the spec number for the `Closes` line (tickets are already closed — only the spec rides the PR). The skill stops at the clipboard by design; so do you: present title, body, and the ready `gh pr create --body-file` / `glab mr create` command, then `ask_user` — the user opens the PR or tells you to. This is where the user's involvement begins.
+3. **Draft and open the PR.** Draft title and body with the `aa-pr-message` skill (`~/.agents/skills/aa-pr-message` — load it, don't restate it); the branch name gives it the spec number for the `Closes` line (tickets are already closed — only the spec rides the PR). One override of the skill's clipboard stop: in this workflow the run itself opens the PR — run the `gh pr create --body-file` / `glab mr create` command directly, ready for review. The user reviews the open PR on their own time; the run doesn't block here.
 
 4. **Rollup.** Comment the rollup on the spec issue: per-ticket outcomes, failed/deferred work, review verdict table with held findings and one-line reasons.
 
@@ -167,7 +167,7 @@ Post the findings as the final comment on the notes issue under a `## Run retros
 
 6. **Offer cleanup — never run it unprompted.** Final `ask_user`: "N child sessions from this run are still around — clean them up now, or leave them for a post-PR-review steer?" Default is leave them; the user can trigger cleanup later in one sentence. Also delete stale `prompt-exports/` files from this run.
 
-**Done when** the PR decision is with the user, the notes issue is closed with the retro comment, and the rollup is posted.
+**Done when** the PR is open, the notes issue is closed with the retro comment, and the rollup is posted.
 
 ---
 
