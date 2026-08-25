@@ -1,6 +1,6 @@
 ---
 name: aa-pr-message
-description: Drafts a PR/MR title and markdown body from a branch's commits — for the user to review and paste into `gh pr create`, `glab mr create`, or the web UI. Stops at the clipboard; never pushes or opens the PR/MR. Use when the user wants PR copy: a title and/or description for a branch they're about to open. Sibling of `aa-commit`/`aa-commit-clarity`.
+description: Drafts a PR/MR title and markdown body from a branch's commits — for the user to review and paste into `gh pr create`, `glab mr create`, or the web UI. Stops at the clipboard; never pushes or opens the PR/MR. Use when the user wants PR copy: a title and/or description for a branch they're about to open. Sibling of `commit-me`/`aa-commit-clarity`/`land-pr`.
 ---
 
 # PR Message
