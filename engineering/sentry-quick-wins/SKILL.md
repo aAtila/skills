@@ -1,11 +1,11 @@
 ---
 name: sentry-quick-wins
-description: Use when the user wants to triage the easy bugs from Sentry — "triage Sentry", "find quick wins", "what should I fix first from Sentry", "pull the top fixable bugs", "clear the easy ones before the hard ones". Fetches unresolved issues, ranks by impact while filtering noise, and triages the best quick wins into an approval table. Triage only — stops at the table.
+description: Use when the user wants to find and fix the easy bugs from Sentry first — "triage Sentry", "find quick wins", "what should I fix first from Sentry", "pull the top fixable bugs", "clear the easy ones before the hard ones". Fetches unresolved issues, ranks by impact while filtering noise, triages the best quick wins into an approval table, then fixes them one commit at a time.
 ---
 
 # Sentry Quick Wins
 
-Find the **quick wins** in Sentry — real user-facing bugs with a clear root cause and a small, low-risk fix — and surface them in a ranked table so they can be cleared ahead of the complex issues. This skill triages only; fixing is a separate step the user drives later.
+Find the **quick wins** in Sentry — real user-facing bugs with a clear root cause and a small, low-risk fix — and clear them before the complex issues. Two phases with a hard stop between them: triage for approval, then fix.
 
 A **quick win** is:
 - a likely real, user-facing bug (not noise)
@@ -21,7 +21,7 @@ The Sentry MCP must be connected to *this* session — it is not always exposed 
 
 If no Sentry tool is available, stop and tell the user to connect the Sentry MCP. Do not fall back to anything else.
 
-## Step 1 — Triage
+## Step 1 — Triage (Phase 1)
 
 Fetch unresolved issues from the last 30 days. Scope to the project the user is working in if the MCP exposes more than one.
 
@@ -40,5 +40,15 @@ Return a ranked table with these columns:
 Then a **Skipped** section: issues that looked relevant but were rejected as noise, too vague, too risky, or not quick wins — one-line reason each. This is the audit trail; it proves the noise was examined, not silently dropped.
 
 <HARD-GATE>
-Stop after the table. This skill ends at triage — do NOT edit code, reproduce, or fix anything. Fixing is a separate step the user drives later.
+Stop after the table. Do NOT edit code, reproduce, or fix anything until the user approves which issues to take.
 </HARD-GATE>
+
+## Step 2 — Fix (Phase 2, only after approval)
+
+Fix approved issues one at a time. For each:
+- reproduce the issue, or cite the Sentry failing path that proves it
+- make the smallest root-cause change — no broad refactors, no symptom-only patches. If the change starts touching more than ~2 files or needs a design call, it was not a quick win — drop it and say why
+- add or update a regression test where practical
+- run the relevant tests/checks
+- one commit per fix (conventional-commit style; use `commit-me` if you want the full commit workflow)
+- summarize the diff and how you verified it
