@@ -117,6 +117,7 @@ Rules:
 - **The diff shows the *what*; the body supplies the *why*.** Give the reviewer enough context to evaluate whether the what is the *right* what.
 - **No attribution footers.** No `Co-Authored-By`, no `Generated with…`, no `🤖`. The PR author is the human pushing it.
 - **Don't enumerate every commit.** Reviewers can click "Commits" if they want that. The body is the human summary.
+- **Issue reference (optional):** if the branch's parent issue can be confidently determined — the user mentioned it, the branch name encodes it (`spec/252-…`, `123-fix-login`, `feature/GH-123`), or the commits carry `Refs #123` — end the body with `Closes #<n>` on its own line (`Closes` here, unlike commits' `Refs`: merging the PR is exactly when the issue should close). If it can't be confidently determined, skip the line silently — don't ask and don't guess.
 
 ### Worked example
 
