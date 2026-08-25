@@ -1,11 +1,11 @@
 ---
 name: aa-pr-message
-description: Drafts a PR/MR title and markdown body from a branch's commits — for the user to review and paste into `gh pr create`, `glab mr create`, or the web UI. Stops at the clipboard; never pushes or opens the PR/MR. Use when the user wants PR copy: a title and/or description for a branch they're about to open. Sibling of `commit-me`/`aa-commit-clarity`/`land-pr`.
+description: Drafts a PR/MR title and markdown body from a branch's commits. Stops at the clipboard by default — for the user to review and paste into `gh pr create`, `glab mr create`, or the web UI; opens the PR/MR itself only when the invoker explicitly says to. Never pushes. Use when the user wants PR copy — a title and/or description for a branch they're about to open — or asks to draft and open the PR in one go. Sibling of `commit-me`/`aa-commit-clarity`/`land-pr`.
 ---
 
 # PR Message
 
-This skill stops at the clipboard on purpose. The user wants to read the title and body before pasting them into a PR (GitHub) or merge request (GitLab) — via `gh`, `glab`, or the web UI. ("PR" throughout means either; the job is identical.) Two siblings cover the adjacent jobs:
+This skill stops at the clipboard by default, on purpose: the user wants to read the title and body before pasting them into a PR (GitHub) or merge request (GitLab) — via `gh`, `glab`, or the web UI. The one exception is an explicit instruction to open — the user (or an orchestrating workflow) saying "draft and open it"; then Step 5 runs the create command instead of stopping. Absent that instruction, stop at the clipboard — an inferred intent to open is not an instruction. ("PR" throughout means either; the job is identical.) Two siblings cover the adjacent jobs:
 
 - **`commit-me`** — generates the message for a single commit and copies it to the clipboard.
 - **`aa-commit-clarity`** — advisory only. Use first when a branch contains genuinely separable concerns and you want to think about whether it should be one PR or several before drafting the body.
@@ -178,6 +178,8 @@ glab mr create --title "<title>" --description "$(cat /tmp/pr-body.md)"
 ```
 
 The clipboard form (`gh pr create --title "<title>" --body "$(pbpaste)"`) is fine as a fallback for short bodies without quotes or backticks, but don't recommend it for bodies that contain code blocks.
+
+**If the invoker explicitly asked to open the PR**: run the file-based create command yourself instead of handing it off, and report the PR URL. Everything else above still applies — including printing the title and body in full, and the push check below (an unpushed branch still stops you; the user pushes).
 
 **Check that the branch is pushed.** `git status` won't tell you this reliably — it only reports against the configured upstream. Use:
 
