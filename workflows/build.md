@@ -79,9 +79,9 @@ Implement the plan directly with `apply_edits`, `file_actions`, and `read_file`.
 
 Like asking your mentor to look over your work before it goes to main.
 
-**Trivial task** (a few lines, single-step plan)? Commit with `commit-me` and wrap up — skip the rest of this phase.
+**Trivial task** (a few lines, single-step plan)? Commit (call the Skill tool with `commit-me`) and wrap up — skip the rest of this phase.
 
-1. **Commit the implementation** with the `commit-me` skill. Landing it first gives the reviewer an exact diff target, and review fixes get their own commit — a bad fix reverts cleanly without touching the implementation.
+1. **Commit the implementation** — call the Skill tool with `commit-me`. Landing it first gives the reviewer an exact diff target, and review fixes get their own commit — a bad fix reverts cleanly without touching the implementation.
 2. **Publish the diff**: `git op=diff compare="back:1" artifacts=true` (use `compare="main"` if the branch holds several commits) — after committing, the default `uncommitted` spec diffs nothing. The review artifacts land in the selection so the oracle sees exactly what changed.
    **Footprint check**: map every changed file in the diff to a plan step. Tests, docs, and mechanically required callers extend the plan freely; a changed production file no plan step explains is drift — name it in your summary and flag it to the reviewer, so the review judges it rather than blesses it.
 3. **Ask the oracle to review**, continuing the builder's chat:
@@ -100,7 +100,7 @@ Like asking your mentor to look over your work before it goes to main.
 
 The oracle is a *warm* reviewer — it holds the selection and the plan, so it catches drift from the plan cheaply. It will also excuse mistakes it helped plan; accept that trade. If the work warrants a cold read, that's a different workflow.
 
-4. **Apply findings you agree with**, verify, then **commit the fixes with `commit-me` as a second commit** referencing the review. Findings you reject: note why in your summary — don't silently drop them.
+4. **Apply findings you agree with**, verify, then **commit the fixes as a second commit** (call the Skill tool with `commit-me`) referencing the review. Findings you reject: note why in your summary — don't silently drop them.
 
 **Done when** the implementation and any review fixes are committed, and the final summary lists applied and rejected findings.
 

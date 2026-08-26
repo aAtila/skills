@@ -51,9 +51,9 @@ A candidate that fails either gate is **dropped** — but make the decision *exp
 
 **4. Apply now, or hand off — the user's call.**
    - **Execute now.** Behavior must not change: same inputs, outputs, side effects. Run the existing tests/checks after tidying to confirm, then commit the tidy **in its own commit, separate from the behavioral change** — so a reviewer can read structure and behavior independently and revert either alone (squashing at the PR boundary is fine; the discipline is in how you author it, not the merge artifact). Continue to step 5.
-   - **Hand off.** Don't touch code. Use `handoff` to capture the one-sentence change, the curated blast radius, and the approved shortlist (each item with its rationale, plus the execute discipline above) for a fresh session to execute. The skill ends here.
+   - **Hand off.** Don't touch code. Call the Skill tool with `handoff` to capture the one-sentence change, the curated blast radius, and the approved shortlist (each item with its rationale, plus the execute discipline above) for a fresh session to execute. The skill ends here.
 
-**5. Hand off to `tdd`** (only if you executed). Say: *"Structural prep committed separately — the change is now easy. Starting TDD."* Then make the easy change through red → green → refactor.
+**5. Hand off to TDD** (only if you executed). Say: *"Structural prep committed separately — the change is now easy. Starting TDD."* Call the Skill tool with `tdd`, then make the easy change through red → green → refactor.
 
 ## Worked examples
 

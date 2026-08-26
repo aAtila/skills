@@ -50,5 +50,5 @@ Fix approved issues one at a time. For each:
 - make the smallest root-cause change — no broad refactors, no symptom-only patches. If the change starts touching more than ~2 files or needs a design call, it was not a quick win — drop it and say why
 - add or update a regression test where practical
 - run the relevant tests/checks
-- one commit per fix (conventional-commit style; use `commit-me` if you want the full commit workflow)
+- one commit per fix (conventional-commit style; call the Skill tool with `commit-me` if you want the full commit workflow)
 - summarize the diff and how you verified it

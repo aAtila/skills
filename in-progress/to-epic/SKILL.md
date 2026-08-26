@@ -10,7 +10,7 @@ Frame a cross-repo effort as an **Epic** — the r3call table-of-contents issue 
 
 Do NOT interview the user for the goal — synthesize the ratified Decision you are already working from. The repo split and the Contract are **recommendations**; Atila ratifies them at the quiz gate before anything publishes.
 
-The issue tracker vocabulary and the wayfinding operations (the sub-issue and dependency `gh api` calls) live in r3call's `docs/agents/issue-tracker.md` — run `/setup-matt-pocock-skills` in r3call if they are missing.
+The issue tracker vocabulary and the wayfinding operations (the sub-issue and dependency `gh api` calls) live in r3call's `docs/agents/issue-tracker.md` — call the Skill tool with `setup-matt-pocock-skills` in r3call if they are missing.
 
 ## Process
 

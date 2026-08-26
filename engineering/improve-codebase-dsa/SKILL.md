@@ -71,7 +71,7 @@ Do NOT propose the final types yet. After the file is written, ask the user: "Wh
 
 ### 3. Grilling loop
 
-Once the user picks a candidate, run the `/grilling` skill to walk the decision tree with them:
+Once the user picks a candidate, call the Skill tool with `grilling` to walk the decision tree with them:
 
 - **The exact shape** — the variants of the union or the states and transitions of the machine; which fields belong to which variant.
 - **The call sites** — which re-guesses and branches collapse once the representation is tight; where the new type is constructed.

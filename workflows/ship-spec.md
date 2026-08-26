@@ -95,7 +95,7 @@ The brief is pointers plus scope:
 
 > Your task is ticket <ref> — read it first (`gh issue view <n>` / `glab issue view <n>`), including its acceptance criteria. Implement exactly that ticket; other tickets in the spec are handled separately.
 > Fetch the notes issue <ref> the same way: research notes for context, the Ledger section for what previous tickets already landed.
-> _(TDD tickets only:)_ Follow the `tdd` skill — load it before you start. Build at this seam: `<seam>`. It's already confirmed — treat it as settled. If it looks wrong, stop and report back rather than choosing another one.
+> _(TDD tickets only:)_ Call the Skill tool with `tdd` and follow it before you start. Build at this seam: `<seam>`. It's already confirmed — treat it as settled. If it looks wrong, stop and report back rather than choosing another one.
 > You are on branch `spec/<number>-<slug>` — commit your work there as Build It directs. Pushing and PRs belong to the orchestrator.
 > If you stop to report, leave your working tree exactly as it stands — the orchestrator owns any decision about uncommitted work.
 > Done when the ticket's acceptance criteria are implemented and committed. Report your commit SHAs and files changed.
@@ -153,9 +153,9 @@ Update the notes-issue Ledger row (status, SHAs, files) and comment the commit S
 
 Keep the brief to that sentence — naming decisions or constraints warms up the reviewer and defeats the cold read. Wait with `agent_run op=wait`.
 
-2. **Warm triage in this session** with the `apply-review` skill (orchestrated mode). Interrogate the reviewer by steering its session — one finding, one specific question per steer. Expect one false-positive class: the cold reviewer cannot see intent, so a finding that contradicts an explicit spec decision is a challenge to answer with the spec's own text, not a defect to fix — have the reviewer amend its saved report when it withdraws one. Apply accepted fixes (narrow fresh agents for behavioural or multi-file fixes; directly for mechanical ones), verify against the affected modules' full test suites, and commit them with `commit-me` as their own commit. An architectural finding that invalidates closed tickets is a pause.
+2. **Warm triage in this session** — call the Skill tool with `apply-review` (orchestrated mode). Interrogate the reviewer by steering its session — one finding, one specific question per steer. Expect one false-positive class: the cold reviewer cannot see intent, so a finding that contradicts an explicit spec decision is a challenge to answer with the spec's own text, not a defect to fix — have the reviewer amend its saved report when it withdraws one. Apply accepted fixes (narrow fresh agents for behavioural or multi-file fixes; directly for mechanical ones), verify against the affected modules' full test suites, and commit them as their own commit (call the Skill tool with `commit-me`). An architectural finding that invalidates closed tickets is a pause.
 
-3. **Draft and open the PR** with the `draft-pr` skill (load it, don't restate it), invoking its draft-and-open branch: this workflow's explicit instruction is to open. The branch name gives it the spec number for the `Closes` line (tickets are already closed — only the spec rides the PR). The user reviews the open PR on their own time; the run doesn't block here.
+3. **Draft and open the PR** — call the Skill tool with `draft-pr` (don't restate it), invoking its draft-and-open branch: this workflow's explicit instruction is to open. The branch name gives it the spec number for the `Closes` line (tickets are already closed — only the spec rides the PR). The user reviews the open PR on their own time; the run doesn't block here.
 
 4. **Rollup.** Comment the rollup on the spec issue: per-ticket outcomes, failed/deferred work, review verdict table with held findings and one-line reasons.
 

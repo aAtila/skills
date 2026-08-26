@@ -284,7 +284,7 @@ The agents you dispatch are fully capable — they have tools, they'll read AGEN
 
 Implementation is test-first. Any brief that builds code carries two extra lines:
 
-> Follow the `tdd` skill (installed globally under `~/.agents/skills/tdd`) — load it before you start.
+> Call the Skill tool with `tdd` and follow it before you start (fallback if the Skill tool lacks it: read `~/.agents/skills/tdd/SKILL.md`).
 > Build at this seam: `<seam from the plan>`. It's already confirmed — treat it as settled. If it looks wrong, stop and tell me rather than choosing another one.
 
 Two details make this hold:
@@ -390,7 +390,7 @@ After all items verify, run the review loop. It brackets the run's work in **two
 
 ### 1. Commit the implementation
 
-Commit the run's implementation now with the `commit-me` skill, staging exactly the manifest files from Phase 4 — baseline-dirty and sibling-run files stay out. This gives the reviewer an exact diff target instead of a fuzzy dirty tree, and closes the window where staged files can be swept into a concurrent session's commit. On a working branch an intermediate commit with findings-still-to-fix is harmless; squash at PR time if it matters. Committing on `main` is fine — branch choice is the user's responsibility, made before the run starts. But the commit may trigger a permission approval, and an unattended run idles until the prompt times out; if this run is on `main`, ask the user to pre-authorize the commits when you enter Phase 5, not when the gate fires.
+Commit the run's implementation now — call the Skill tool with `commit-me` — staging exactly the manifest files from Phase 4 — baseline-dirty and sibling-run files stay out. This gives the reviewer an exact diff target instead of a fuzzy dirty tree, and closes the window where staged files can be swept into a concurrent session's commit. On a working branch an intermediate commit with findings-still-to-fix is harmless; squash at PR time if it matters. Committing on `main` is fine — branch choice is the user's responsibility, made before the run starts. But the commit may trigger a permission approval, and an unattended run idles until the prompt times out; if this run is on `main`, ask the user to pre-authorize the commits when you enter Phase 5, not when the gate fires.
 
 ### 2. Dispatch the cold reviewer
 
@@ -411,7 +411,7 @@ Wait for the review with `agent_run op=wait`.
 
 ### 3. Triage warm with `apply-review`
 
-Load the `apply-review` skill and run it in **this session** — triage lives with the implementation context, never in a fresh sub-agent (a fresh agent is the skill's "coming in cold" case and collapses into compliance). Follow the skill's **orchestrated mode**.
+Call the Skill tool with `apply-review` and run it in **this session** — triage lives with the implementation context, never in a fresh sub-agent (a fresh agent is the skill's "coming in cold" case and collapses into compliance). Follow the skill's **orchestrated mode**.
 
 For anything unclear or contestable, interrogate the reviewer directly — you hold its handle. Write each steer message fresh: quote the finding verbatim, state the concrete thing you see in the code that makes it unclear or contestable, and ask **one specific question**. One finding per steer — bundled questions get bundled, shallower answers.
 
@@ -434,7 +434,7 @@ Per the skill's orchestrated mode: apply `apply` and `reframe` verdicts immediat
 
 Include in the final rollup: the full verdict table, what was applied, and the held findings (`reject`/`defer`/`invalid`) with one-line reasons so the user can push back.
 
-**Commit the applied fixes with `commit-me` as their own commit**, referencing the review — separate from the implementation commit, so a fix that turns out bad reverts on its own. And keep the review session out of `cleanup_sessions` until triage is done — you may still need to steer it.
+**Commit the applied fixes as their own commit** (call the Skill tool with `commit-me`), referencing the review — separate from the implementation commit, so a fix that turns out bad reverts on its own. And keep the review session out of `cleanup_sessions` until triage is done — you may still need to steer it.
 
 ---
 
