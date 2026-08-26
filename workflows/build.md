@@ -50,12 +50,13 @@ Get a lay of the land: `get_file_tree` (`mode:"auto"`), then targeted `file_sear
   "tool": "context_builder",
   "args": {
     "instructions": "<reformulated prompt>",
-    "response_type": "plan"
+    "response_type": "plan",
+    "export_response": true
   }
 }
 ```
 
-Returns the selection, an architectural plan grounded in actual code, and a `chat_id` for follow-ups. Trust the plan — the builder explores deeply and selects intelligently.
+Returns the selection, an architectural plan grounded in actual code, a `chat_id` for follow-ups, and an `oracle_export_path` — the plan serialized to a file. That file is the plan of record: it survives compaction, and Phase 4's review checks the diff against it. Trust the plan — the builder explores deeply and selects intelligently.
 
 **Re-assert the session name immediately after this call** — `context_builder` renames the session to its chat title. Pass the byte-identical string from Phase 0:
 
@@ -82,6 +83,7 @@ Like asking your mentor to look over your work before it goes to main.
 
 1. **Commit the implementation** with the `commit-me` skill. Landing it first gives the reviewer an exact diff target, and review fixes get their own commit — a bad fix reverts cleanly without touching the implementation.
 2. **Publish the diff**: `git op=diff compare="back:1" artifacts=true` (use `compare="main"` if the branch holds several commits) — after committing, the default `uncommitted` spec diffs nothing. The review artifacts land in the selection so the oracle sees exactly what changed.
+   **Footprint check**: map every changed file in the diff to a plan step. Tests, docs, and mechanically required callers extend the plan freely; a changed production file no plan step explains is drift — name it in your summary and flag it to the reviewer, so the review judges it rather than blesses it.
 3. **Ask the oracle to review**, continuing the builder's chat:
 
 ```json
