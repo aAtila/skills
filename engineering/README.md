@@ -19,6 +19,7 @@ The day-to-day coding companions. One line each; the SKILL.md is the source of t
 | `apply-review` | Triages an incoming review's findings: applies what holds up, defends the rest with facts. | "apply this review" |
 | `test-review` | Audits existing tests for false greens and coverage gaps. Read-only; hands gaps to tdd. | "are these tests any good?" |
 | `qa-plan` | Post-build acceptance checklist derived from intent, not the diff. | "how do I QA what we built?" |
+| `run-postmortem` | Audits a finished agent run: plan lineage, commit ownership, working/not-working with receipts, verdict. | "what did the overnight run actually do?" |
 
 ## Code placement & prep
 
