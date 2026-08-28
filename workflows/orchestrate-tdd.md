@@ -459,6 +459,20 @@ Done when the issue is closed, or every unmet AC is either dispatched or surface
 
 ---
 
+## Phase 7: Retrospective
+
+Retros live on the tracker, never in a repo's files — and in the **skills repo**, the repo this workflow file lives in, not the project repo. The run's own issue stays about the work; the retro never lands there.
+
+Always cold: the orchestrator grading itself is the one thing this workflow refuses everywhere else. Export your own transcript (`agent_manage op=extract_handoff`, `output_path` in a temp location outside the repo) and dispatch a fresh agent whose brief is pointers only — this workflow file and that export:
+
+> Read the Orchestrate (TDD) workflow at `<workflow path>` and the run transcript at `<export path>`. Audit this run against the workflow's own contract: baseline respected, seams named before dispatch, briefs pointer-only, manifests recorded, cold review kept cold. Report traps (where the wording steered behaviour wrong or nearly did, with turn references), clean areas, and proposed workflow edits.
+
+Post the findings as a **retro issue in the skills repo** (resolve its `owner/repo` from the skills clone's remote and pass it explicitly, e.g. `gh issue create --repo <owner>/<skills-repo>`). One issue per run: title `Retro: Orchestrate (TDD) — <project repo> — <date>`, labels `retro` and `orchestrate-tdd`, body opening with `Workflow: orchestrate-tdd | Repo: <owner>/<project-repo> | Issue: #<issue> | Session: <id> | Date: <date>` (omit the `Issue:` field when the run has none) followed by the findings. Leave it **open** — open means unprocessed; the **Workflow Therapist** workflow closes it when its findings are consumed. If the skills repo is unreachable from this run (auth, host mismatch), hand the retro text to the user rather than dropping it or posting it into the project repo. Then delete the transcript export — the sessions themselves stay disposable.
+
+Done when the retro issue is open in the skills repo and the export is deleted.
+
+---
+
 ## If the user stops the run
 
 Abort is a first-class exit, not a failure. When the user halts mid-flight:
