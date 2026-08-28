@@ -16,7 +16,9 @@ Get an independent code review from the Oracle, then layer your own perspective 
 
 3. **Curate selection if needed.** Use `manage_selection` to add any extra files the Oracle should see for context (callers of changed functions, related tests, the spec being implemented). Skip this if the diff is self-contained.
 
-4. **Request the review.** Call `ask_oracle` with `mode="review"`. Pass through any specific concerns the user voiced ("I'm worried about the error handling in X", "does the new caching strategy hold up?") so the Oracle can focus there. If the user gave no steer, ask for a general review covering correctness, design, edge cases, and risks.
+4. **Request the review.** Call `ask_oracle` with `mode="review"`, instructing the Oracle to review per `references/review-rubric.md` — include the rubric's key rules inline in the message (canonical-path doctrine, Verified vs. Suspected confidence with "Suspected cannot block", and the volume calibration: fewer Verified findings beat exhaustive lists; a clean review with zero manufactured findings is a valid outcome). Pass through any specific concerns the user voiced ("I'm worried about the error handling in X", "does the new caching strategy hold up?") so the Oracle can focus there.
+
+   **Repeat review?** If a prior review of this same change was already triaged (e.g. via `apply-review`), include that triage ledger — each finding with its verdict and one-line reason — and instruct: "Verify the recorded corrections; do not reopen an adjudicated finding without new source evidence." This is what stops the endless re-review spiral of freshly manufactured blockers.
 
 5. **Layer your own take — explicitly contrasting.** After the Oracle responds, share both:
    - A short summary of what the Oracle flagged (don't just dump its full response).

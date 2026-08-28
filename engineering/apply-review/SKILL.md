@@ -103,6 +103,7 @@ Report:
 - **Held** — rejected/deferred, one line each, so the user can push back.
 - **Verification** — what you ran and the result.
 - **New** — anything the review surfaced indirectly that nobody flagged.
+- **Ledger** — a compact table of every finding with its final verdict and one-line reason. This is the artifact a repeat review consumes: if the same change goes back for another review round (e.g. via `aa-second-opinion`), pass this ledger to the reviewer with the instruction not to reopen adjudicated findings without new source evidence. Without it, each re-review relitigates settled calls and the loop never converges.
 
 Do not commit unless asked.
 
