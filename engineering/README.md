@@ -20,6 +20,7 @@ The day-to-day coding companions. One line each; the SKILL.md is the source of t
 | `test-review` | Audits existing tests for false greens and coverage gaps. Read-only; hands gaps to tdd. | "are these tests any good?" |
 | `qa-plan` | Post-build acceptance checklist derived from intent, not the diff. | "how do I QA what we built?" |
 | `run-postmortem` | Audits a finished agent run: plan lineage, commit ownership, working/not-working with receipts, verdict. | "what did the overnight run actually do?" |
+| `rot-hunt` | Traces a recurring bad pattern to the commit that planted it; fix the seed, not the copies. | "why does this pattern keep showing up?" |
 
 ## Code placement & prep
 
