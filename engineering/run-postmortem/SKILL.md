@@ -1,6 +1,7 @@
 ---
 name: run-postmortem
 description: Reconstruct what a finished agent run or overnight branch actually did — plan lineage, commit ownership, working/not-working with receipts, rot seeds — and deliver a verdict. Use the morning after an unattended run, when the user asks "what did the agent actually do?", "did it work?", "audit this branch", or before deciding whether to land, trim, or redo agent-produced work.
+disable-model-invocation: true
 ---
 
 # Run postmortem
