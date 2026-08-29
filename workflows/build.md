@@ -71,6 +71,7 @@ Returns the selection, an architectural plan grounded in actual code, a `chat_id
 Implement the plan directly with `apply_edits`, `file_actions`, and `read_file`. Implementation is your job; the oracle reasons, you edit.
 
 - **Token budget:** stay under ~160k; check `manage_selection(op:"get")` if you add files. Prefer slices for large additions.
+- **Steering:** a mid-run redirect from the user (or an orchestrator) goes into the plan file first — `apply_edits`, a `## Decisions` section — then act on it. The plan of record carries corrections, and a correction it doesn't carry is one that compaction and the Phase 4 review never see.
 - **Coverage:** one missing file → `manage_selection op=add`, leaving the builder's selection intact. More than one → rerun `context_builder` with a better prompt; that is its job. A rerun returns a new `chat_id` — it supersedes the old one everywhere below.
 
 **Done when** every step of the plan is implemented — not when the first edit compiles.

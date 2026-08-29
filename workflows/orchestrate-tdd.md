@@ -115,7 +115,7 @@ The tool returns `oracle_export_path` and `oracle_export_instruction`. Include `
 
 Any call that titles a chat — `context_builder` or `ask_oracle` — renames this session to that title. Whenever you make one, re-assert the Phase 0 name straight after.
 
-**The export is a shared document.** Sub-agents treat it as **read-only** context. As the orchestrator, you own this file — use it as a living checklist by updating it (via `apply_edits`) to mark items complete, note deferred work, or track progress across phases.
+**The export is a shared document.** Sub-agents treat it as **read-only** context. As the orchestrator, you own this file — use it as a living checklist by updating it (via `apply_edits`) to mark items complete, note deferred work, or track progress across phases. It carries decision state too: when the user steers you mid-run, append the actionable decision to a `## Decisions` section before acting on it — agents dispatched after the steer inherit the correction from the file, and a compacted session recovers it from there rather than the conversation. This is the artifact side of "two conversations, kept separate": the translated decision goes in, the user's verbatim words don't.
 
 ```json
 // Generate and export the plan in one call
