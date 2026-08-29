@@ -45,6 +45,8 @@ Recurrence must cross runs — and read the `Repo:` field: a trap recurring acro
 
 For each pattern, locate the exact passage in the client file that steered the behaviour. A pattern you can't pin to a passage is a finding about the runs' environment, not the file — hold it and say so.
 
+**Escalating to transcripts.** Retros are testimony; the run transcript is the record. Each retro header carries its `Session:` id — read the transcript (`history op=get_session`) only when testimony can't settle a ruling: two retros contradict each other, a second report is too vague to rule promote-or-hold, or a proposed edit would touch a praise-fenced passage. Testimony that already settles the ruling needs no replay.
+
 **Done when** every finding is classified and every pattern points at a passage.
 
 ---
