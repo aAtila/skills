@@ -62,9 +62,9 @@ All tracker commands come from the _Tracker adapter_ section at the end of this 
 2. **Decide TDD per ticket.** A ticket delivering testable behaviour (logic, API, data flow — most tracer bullets by construction) is a **TDD ticket** and needs a seam. Config, tooling, docs, and pure visual polish tickets are exempt.
 3. **Confirm the seams.** You are the seam authority: review the explore agent's proposals against the tickets, fix what's wrong. A seam you can't settle is a pause.
 4. **Create the notes issue** on the tracker: title `Notes: <spec title>`, linked from the spec, body with four sections — _Research notes_ (the explore output), _Seams_ (the confirmed ticket→seam table), _Ledger_ (one row per ticket: status · commit SHAs · files changed, all empty for now), _Decisions_ (empty for now). From here on the notes issue is the run's persistent memory — update the Ledger after every ticket, and append every pause resolution and mid-run user steer to _Decisions_ as it lands, so a resumed run can reconstruct everything — work and corrections — from the tracker alone.
-5. **Seam-table checkpoint** — `ask_user`, showing the ticket→seam table and which tickets are TDD/exempt/human. This is the run's one scheduled pause; dispatch nothing until the user confirms.
+5. **Auto-approve the seams and proceed.** You are the seam authority — once you've confirmed the seams in step 3, they're settled. Record the confirmed ticket→seam table (and which tickets are TDD/exempt/human) in the notes issue and move straight to Phase 3; do **not** pause for user confirmation of the seam table. A seam you genuinely can't settle is still a pause (step 3), but a settled table dispatches on its own.
 
-**Done when** the notes issue exists with all four sections in place and the user has approved the seam table.
+**Done when** the notes issue exists with all four sections in place.
 
 ---
 
