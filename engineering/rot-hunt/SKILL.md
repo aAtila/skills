@@ -48,8 +48,22 @@ Produce a report, **don't edit**. One table row per pattern hunted:
 - **Fork** — the decision that planted it, and the alternative
 - **Verdict** — `remove` (fix the seed, then the copies follow) or `tolerate` (with the constraint that justifies it)
 - **Fix order** — for `remove`: the seed first, copies second, in dependency order. Never the reverse.
+- **Rung** — for `remove`: the enforcement rung (see Promote to enforcement)
 
 If the user wants the fix executed, the seed removal is the first work item — hand the ordered list to `tidy-first`/`tdd` or a dispatch, with the seed token as a post-fix search check ("token count reaches zero, or every remaining hit is justified").
+
+## Promote to enforcement
+
+A hunted pattern that isn't enforced regrows. Every `remove` row also gets a **rung**: the hardest rung on the enforcement ladder that fits the pattern.
+
+1. **Impossible** — change the API or type so the pattern no longer compiles.
+2. **Lint** — an ESLint rule names the shape (`no-restricted-imports`, `no-restricted-syntax` with an AST selector).
+3. **CI check** — a small script greps for the seed token and fails with a message naming the supported path.
+4. **Prose** — a line in a skill or AGENTS.md. Picking this rung requires one sentence on why rungs 1–3 don't fit.
+
+The rule ships in the same change as the seed fix, with the cleaned copies as proof it passes. A CI check carries a one-line header naming the seed it guards; delete the check when a later change moves it to rung 1.
+
+Done when every `remove` row has a rung, and every rung-4 row carries its justification.
 
 ## When this skill is the wrong fit
 
