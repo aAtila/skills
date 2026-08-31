@@ -13,7 +13,7 @@ Sibling of `aa-simplify` (which reads the current diff) — rot-hunt reads *hist
 
 Pin the pattern before searching. Write one line: the shape (a helper name, a workaround idiom, a type, a copy-pasted block, a config hack) and why it's bad. If the user gave only a symptom ("this file feels off"), read the file, pick the candidate pattern, and confirm the one-liner with the user before hunting.
 
-Done when the pattern has a one-line description and at least one **distinctive search token** — a string specific enough that matches are instances, not noise.
+Done when the pattern has a one-line description and at least one **distinctive search token** — a string specific enough that matches are instances, not noise. "No valid candidate" is a legitimate outcome: if reading turns up nothing that meets the bar, report that as the finding and end the hunt there.
 
 ## Find the seed
 
@@ -67,6 +67,7 @@ Done when every `remove` row has a rung, and every rung-4 row carries its justif
 
 ## When this skill is the wrong fit
 
+- Findings should land on the issue tracker → `rot-hunt-to-issue`
 - One-off over-engineering in a fresh diff → `aa-simplify`
 - Placement drift (right code, wrong folder) → `improve-codebase-colocation`
 - "What did the overnight run do?" → `run-postmortem` (which calls this skill for its rot section)
