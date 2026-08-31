@@ -1,0 +1,26 @@
+{
+  "skill_name": "deploy-check",
+  "evals": [
+    {
+      "id": 0,
+      "name": "green-pure-code-change",
+      "prompt": "I'm about to land this branch. Anything I need to do for a safe deploy?\n\nRepo has a DEPLOYMENT.md:\n\n```\n# Deployment\n- Deploys: auto-trigger on merge to main (Vercel)\n- Migrations: `pnpm db:migrate`, run manually on prod before enabling code that needs them\n- Env vars: set in Vercel dashboard\n- Workers/crons: daily-report cron (Vercel cron, 06:00)\n- Rollback: revert commit on main, redeploy\n- Tables where locking matters: none listed\n\n## Gotchas\n(none)\n\nVerified: 2026-08-01\n```\n\n`git diff main...HEAD --stat`:\n\n```\n src/components/EnquiryCard.tsx      | 24 ++++++------\n src/components/EnquiryList.tsx      | 12 +++---\n src/utils/format-date.ts            |  8 ++--\n tests/format-date.test.ts           | 15 +++++++\n```\n\nThe diff renames a prop, extracts a date-formatting helper, and adds tests. No migrations, no new env reads, no cron/queue/cache/API-contract changes.",
+      "expected_output": "Verdict: green, delivered in essentially one line — merge is the whole deploy story. Must NOT produce a runbook, an ordered checklist, or a deploy interrogation. This eval guards the anti-goal: the green case stays cheap.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "yellow-env-var-plus-additive-migration",
+      "prompt": "Deploy plan for this branch please.\n\nDEPLOYMENT.md:\n\n```\n# Deployment\n- Deploys: auto-trigger on merge to main\n- Migrations: `pnpm db:migrate` on the prod box\n- Env vars: set in the Railway dashboard; app crashes at boot on missing required vars\n- Workers/crons: enquiry-notify worker (long-running, reads job payloads from Redis)\n- Rollback: revert commit; migrations rolled back with `pnpm db:migrate:down`\n- Tables where locking matters: none under 100k rows\n\n## Gotchas\n- enquiry-notify worker needs a manual restart to pick up new env vars\n\nVerified: 2026-08-15\n```\n\nDiff summary:\n\n- `db/migrations/0051_add_sms_opt_in.sql` — `ALTER TABLE users ADD COLUMN sms_opt_in BOOLEAN DEFAULT false;` (additive)\n- `src/services/sms-provider.ts` — new file, reads `process.env.TWILIO_AUTH_TOKEN` at module load and throws if missing\n- `src/workers/enquiry-notify.ts` — when `user.sms_opt_in` is true, also sends an SMS\n- `.env.example` — adds `TWILIO_AUTH_TOKEN=`\n\nOld code ignores the new column entirely; new code queries it everywhere.",
+      "expected_output": "Verdict: yellow with a sequenced runbook in the correct order: (1) set TWILIO_AUTH_TOKEN in Railway BEFORE any deploy (boot crash otherwise), (2) run the additive migration before merge (new code queries the column; old code ignores it, so migrating first is safe), (3) merge to trigger deploy, (4) manually restart the enquiry-notify worker — must cite the gotcha from DEPLOYMENT.md. Must end with a verify tail: a health confirmation (e.g. worker sending, Sentry quiet) and a rollback line noting the migration is reversible via db:migrate:down. Wrong orderings (migration after merge, env var after deploy) fail.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "red-rename-with-auto-deploy",
+      "prompt": "Give me the safest deployment steps for this branch.\n\nDEPLOYMENT.md:\n\n```\n# Deployment\n- Deploys: auto-trigger on merge to main; ~2 min rollout, old and new instances overlap during it\n- Migrations: `pnpm db:migrate` on prod\n- Env vars: Fly.io secrets\n- Workers/crons: none\n- Rollback: revert commit on main\n- Tables where locking matters: `enquiries` (~40M rows)\n\n## Gotchas\n(none)\n\nVerified: 2026-08-20\n```\n\nDiff summary:\n\n- `db/migrations/0060_rename_customer_email.sql` — `ALTER TABLE enquiries RENAME COLUMN customer_email TO contact_email;`\n- ~14 source files updated from `customer_email` to `contact_email`\n\nSo: rename the column, update all the reads/writes. What order do I run things in?",
+      "expected_output": "Verdict: red — refuses to produce a 'safe' ordered runbook, because none exists: with auto-deploy-on-merge and overlapping instances, old code breaks the moment the column is renamed and new code breaks until it is; no ordering satisfies the compatibility question. Must recommend restructuring, specifically an expand/contract split (add contact_email + dual-write/backfill, deploy, then drop customer_email in a later PR), and should note the 40M-row enquiries table makes the rename/backfill a locking concern too. The failure mode being tested: helpfully generating a confident step-by-step runbook anyway.",
+      "files": []
+    }
+  ]
+}

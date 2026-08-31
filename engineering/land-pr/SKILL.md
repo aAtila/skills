@@ -12,7 +12,7 @@ Takes a reviewed branch from "ready" to "landed", with two gates and one early e
 2. **Rewrite** — on go-ahead, clean the history so every retained commit is a valid state, then update the remote branch.
 3. **Land** — on a second confirmation, merge and delete the feature branch.
 
-Runs only when Atila invokes it by name — the rewrite never starts from another skill's flow. Siblings cover the adjacent jobs: `commit-me` lands a single commit, `aa-commit-clarity` decides boundaries for an uncommitted diff, `draft-pr` describes the branch without reshaping it. This skill is the reshaping-and-landing step that runs after the PR has been reviewed.
+Runs only when Atila invokes it by name — the rewrite never starts from another skill's flow. Siblings cover the adjacent jobs: `commit-me` lands a single commit, `aa-commit-clarity` decides boundaries for an uncommitted diff, `draft-pr` describes the branch without reshaping it, `deploy-check` turns a flagged diff into a deployment verdict and runbook. This skill is the reshaping-and-landing step that runs after the PR has been reviewed.
 
 ## Judgment: the three jobs of history
 
@@ -52,7 +52,9 @@ Then check, after `git fetch origin`:
 
 ### Step 2: Verdict — gate 1, and the advisory exit
 
-Read the series in full — `git log <base>..HEAD --format=fuller` and `git diff <base>...HEAD --stat` (three dots) — and classify every commit: valid building block, fixup/correction, or false trail. **Done when** each commit has a classification, grounded in messages and diff shape, not subject lines alone.
+Read the series in full — `git log <base>..HEAD --format=fuller` and `git diff <base>...HEAD --stat` (three dots) — and classify every commit: valid building block, fixup/correction, or false trail. While reading, also scan for deployment-impact signals — migrations, new env-var reads, cron/worker/queue/cache/API-contract changes. **Done when** each commit has a classification, grounded in messages and diff shape, not subject lines alone, and the impact scan has a result.
+
+If the scan flagged anything, run `deploy-check` on `<base>...HEAD` before presenting the verdict. A **red** deploy-check verdict changes the landing strategy itself (usually an expand/contract split into two PRs) — fold that into the verdict rather than landing as planned.
 
 Then present the verdict in this shape — the three-jobs rationale is required, not decoration; it is how Atila learns why this method fits this PR:
 
@@ -68,6 +70,7 @@ Then present the verdict in this shape — the three-jobs rationale is required,
 > 3. `docs(tracking): record enquiry conversion signal decisions`
 >
 > Repo allows all three merge methods.
+> Deploy impact: yellow — additive migration + new env var; runbook at gate 2. *(or: "none — merge is the whole deploy story")*
 
 Stop here and wait. If the invocation was advisory ("rebase or merge?"), this is the deliverable — offer to continue, then leave it. A **preserve-as-is** verdict skips Step 3 on go-ahead and moves straight to Step 4.
 
@@ -86,7 +89,7 @@ On go-ahead only:
 
 ### Step 4: Land — gate 2
 
-Present the final state (commit list, verification results) and ask once. On confirmation, merge with the verdict's method and delete the feature branch:
+Present the final state (commit list, verification results) — plus `deploy-check`'s runbook when Step 2's scan flagged anything — and ask once. On confirmation, merge with the verdict's method and delete the feature branch:
 
 ```sh
 # GitHub
