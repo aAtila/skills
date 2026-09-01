@@ -30,8 +30,8 @@ If an open issue already covers a candidate (same files, same deepening move), r
 Each candidate card from the base skill's step 2 becomes one issue. Keep the card's content and vocabulary intact — files, problem, solution, benefits in terms of locality and leverage, recommendation strength, and any ADR-conflict callout.
 
 1. Ensure the label exists (ignore "already exists"):
-   - GitHub: `gh label create architecture-review --description "Deepening candidate from an architecture review" --color 1D76DB`
-   - GitLab: `glab label create --name architecture-review --description "Deepening candidate from an architecture review" --color "#1D76DB"`
+   - GitHub: `gh label create architecture-review --description "Deepening candidate from an architecture review, shallow module worth refactoring into a deep one" --color 1D76DB`
+   - GitLab: `glab label create --name architecture-review --description "Deepening candidate from an architecture review, a shallow module worth refactoring into a deep one" --color "#1D76DB"`
 2. File it — title `arch: <one-line deepening description>`, body = the card in markdown. Render the before/after diagrams as ```mermaid fenced blocks (GitHub and GitLab both render them natively); drop any hand-crafted CSS/SVG visuals in favour of a mermaid or plain-text equivalent:
    - GitHub: `gh issue create --label architecture-review --title "..." --body "..."`
    - GitLab: `glab issue create --label architecture-review --title "..." --description "..."`

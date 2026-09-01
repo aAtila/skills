@@ -29,8 +29,8 @@ Call the Skill tool with `rot-hunt`. Run it in full — its report table is the 
 Each new pattern's report row becomes one tracker issue, labeled `rot-hunt` so future ledger checks find it.
 
 1. Ensure the label exists (create it once, then reuse):
-   - GitHub: `gh label create rot-hunt --description "Finding from a rot-hunt" --color D93F0B` (ignore "already exists")
-   - GitLab: `glab label create --name rot-hunt --description "Finding from a rot-hunt" --color "#D93F0B"` (ignore "already exists")
+   - GitHub: `gh label create rot-hunt --description "Recurring bad pattern traced to its seed commit. Fix the seed, not the copies." --color D93F0B` (ignore "already exists")
+   - GitLab: `glab label create --name rot-hunt --description "Recurring bad pattern traced to its seed commit - fix the seed, not the copies" --color "#D93F0B"` (ignore "already exists")
 2. File it — title `rot-hunt: <one-line pattern description>`, body = the report row (seed with file + SHA, copies, fork, verdict, fix order, rung) plus the seed search token verbatim so a later ledger check can match on it:
    - GitHub: `gh issue create --label rot-hunt --title "..." --body "..."`
    - GitLab: `glab issue create --label rot-hunt --title "..." --description "..."`
