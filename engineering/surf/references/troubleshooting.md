@@ -8,6 +8,10 @@ Read this when a surf command fails with `Socket connect failed`, native messagi
 2. Check the `Attempted socket:` line in the output. Default sockets are `/tmp/surf.sock` on macOS/Linux/WSL2 and `//./pipe/surf` on Windows.
 3. If `SURF_SOCKET` is set, the browser-launched host and the shell running `surf` must use the same value.
 
+## Socket permissions (opt-in group sharing)
+
+For opt-in POSIX group sharing, install with `surf install <extension-id> --socket-mode 660 --socket-group <group>`. The default remains `0600`; mode `660` grants every member of that group full Surf authority, so use a dedicated narrow group. Re-run `surf install` without those flags to clear the wrapper settings. Remote Surf credentials remain the revocable per-client alternative.
+
 ## macOS native messaging
 
 Chrome reads the native messaging manifest at `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/surf.browser.host.json`. If native messaging fails:

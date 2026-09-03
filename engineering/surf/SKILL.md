@@ -97,7 +97,9 @@ surf tab.groups                # List all tab groups
 ```bash
 surf window.list                              # List all windows
 surf resize 1280 720                         # Resize current browser window
+surf resize 1280                             # Set current window width only
 surf window.list --tabs                       # Include tab details
+surf window.new                               # New window
 surf window.new --url "https://example.com"   # New window with URL
 surf window.new --incognito                   # New incognito window
 surf window.new --unfocused                   # Don't focus new window
@@ -275,6 +277,7 @@ surf screenshot                           # Auto-saves to /tmp/surf-snap-*.png
 surf screenshot --output /tmp/shot.png    # Save to specific file
 surf screenshot --selector ".card"        # Element only
 surf screenshot --full-page               # Full page scroll capture
+surf screenshot --full-page /tmp/full.png # Full page saved to path
 surf screenshot --no-save                 # Return base64 only, don't save file
 ```
 
