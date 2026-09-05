@@ -1,95 +1,62 @@
 ---
 name: mac-disk-hygiene
-description: >-
-  Diagnose disk usage on a Mac and reclaim space safely. Use when storage is low,
-  a macOS update needs more room, or the user wants to inspect or clean caches,
-  Docker storage, simulators, build outputs, or package-manager downloads.
-  Measures first, identifies ownership and cleanup methods, and removes only
-  authorized targets before verifying actual space recovery.
+description: Diagnose and reclaim Mac disk space, including developer caches, Docker storage, and simulators.
 ---
 
 # Mac disk hygiene
 
-Measure before deleting. Identify what owns each large item, whether it can be
-recreated, and what the user would lose by removing it.
+Identify what owns the storage, what removal would lose, and how much space was
+actually recovered.
 
-## 1. Scan
+## Choose the scope
 
-Run the read-only scanner:
+For broad disk-usage discovery, use the read-only scanner:
 
 ```bash
 bash <skill-dir>/scripts/scan.sh
 bash <skill-dir>/scripts/scan.sh --deep  # also find project dependencies/build outputs
 ```
 
-It reports free space, candidate directories, large storage parents, and a rough
-accounting check. A candidate's measured size is not its reclaimable size. Missing
-permissions or unavailable services mean unknown, not empty or corrupt.
+For a named target or an already measured cleanup, inspect that scope directly.
+Reuse relevant measurements; refresh target identity and active use before removal.
+Follow large application-data directories into specific caches or content rather
+than treating their parents as disposable.
 
-Follow the largest findings. Inspect large Application Support, Containers, and
-dot-directories one level deeper to distinguish caches, runtime downloads, build
-copies, databases, and user content. A parent directory is an investigation lead,
-not a deletion target. Verify unfamiliar paths against the owning app's commands,
-configuration, or source before classifying them.
+Read only the relevant reference sections:
 
-Read [cleanup-catalog.md](references/cleanup-catalog.md) for APFS accounting,
-Docker engines, iOS simulator storage, and standard cleanup commands. When the
-scan finds developer or agent-tool storage, read
-[developer-storage.md](references/developer-storage.md) for Swift build copies,
-Conductor, failed telemetry, and Android SDK components.
+- [Cleanup catalog](references/cleanup-catalog.md): APFS accounting, failed probes,
+  package caches, Docker, Xcode/iOS simulators, browsers, and user content.
+- [Developer storage](references/developer-storage.md): Swift build copies,
+  Conductor, agent caches/telemetry, Android SDK components, and project dependencies.
 
-Finish discovery with measured, non-overlapping targets and explicit unknowns.
-Use scoped follow-up measurements instead of repeatedly scanning the whole home.
+## Select and clean
 
-## 2. Classify and propose
+For proposed targets, give the measured size, purpose, consequence, and cleanup
+method. These labels help communicate the decision:
 
-For each candidate give its size, owner/purpose, consequence of removal, tier, and
-exact cleanup command or app action. Keep these distinctions:
-
-| Tier | Meaning |
+| Label | Meaning |
 |---|---|
-| SAFE | Verified regenerable caches/build outputs. Check for active users of the files before cleaning. |
-| APP-MANAGED | Use the owning app's cleanup mechanism to preserve its bookkeeping. This describes the method, not permission to delete its data. |
-| CHECK | Inspect and select first: device data, archives, downloads, Trash, project dependencies, installed tool versions, models, or unfamiliar files. |
-| LEAVE ALONE | Unclassified application/user data and protected system state. Investigate ownership rather than deleting the parent. |
+| SAFE | Verified regenerable cache/build output, once active use is checked. |
+| APP-MANAGED | Use the owner's cleanup mechanism; this describes method, not permission. |
+| CHECK | Select explicitly: device state, archives, downloads, Trash, dependencies, installed versions, or models. |
+| LEAVE ALONE | Unclassified user/application data and protected system state. |
 
-A verified cache inside Application Support can be a cleanup candidate. Conversely,
-a file inside a cache directory can hold costly model weights or a runtime in use.
+Act on existing authorization for concrete targets and consequences. Ask only when
+the proposed removal adds targets or consequences outside that scope; changing a
+label alone does not require approval. Discovery alone authorizes no deletion.
 
-Sum only non-overlapping, approved candidate estimates. Label the sum as an
-estimate, never a guaranteed minimum: APFS clones, shared image layers, snapshots,
-and concurrent disk activity can change recovery. Ask for missing usage context
-when it changes the decision; an unreferenced image may still be wanted later.
+Prefer the owner's cleanup command. If unavailable, a scoped fallback is reasonable
+for a verified disposable package or cache. Keep cleanup within the requested task;
+app repair, VM resets, and bypassing system protections are outside this workflow.
 
-## 3. Clean the authorized scope
+## Complete the request
 
-Obtain approval for concrete targets and consequences. Existing approval for
-those targets remains valid; continue without asking again for the same action.
-A broader target, another tier, or data loss outside the approved scope needs new
-approval. Explicit approval can cover a named batch across tiers.
+Continue through removal and verification of the authorized scope. Compare free
+space immediately before and after each batch on the same filesystem, normally
+`df -k /System/Volumes/Data`. Verify both the owner's inventory and backing files
+where applicable.
 
-Prefer app-native cleanup commands. Recheck target identity and relevant active
-builds/devices before removal. For Docker, bind every command to the verified
-engine/context. Remove selected items, preserving other versions and data volumes.
-
-If a preferred tool is unavailable, identify why. A narrowly scoped fallback is
-reasonable for a verified self-contained disposable package or cache. Avoid
-turning a cleanup into an extended app-setup or repair task. Do not bypass system
-protections or reset a broken VM to reclaim space.
-
-## 4. Verify
-
-Measure free space immediately before and after each approved batch using the same
-filesystem, normally `df -k /System/Volumes/Data`, with `diskutil info /` for APFS
-container information when available. Confirm the owning tool no longer lists the
-target and check whether its backing files remain.
-
-Report separately:
-
-- What was removed, and any incomplete removal or retained download.
-- Observed net free-space change and current free space.
-- Any relevant re-download/rebuild cost.
-
-An unregistered runtime with a retained system asset is not full disk recovery.
-A mismatched size is not proof of snapshots or corruption; report the observation
-and verify the cause before prescribing additional cleanup.
+Report what was removed, observed net recovery, current free space, rebuild/download
+costs, and unresolved storage. Failed measurements are unknown; directory sizes
+and even non-overlapping sums are estimates, not guaranteed recovery. Consult the
+accounting reference when shared storage or retained files need investigation.
