@@ -1,174 +1,181 @@
-# Cleanup Catalog — safe reclaim commands & macOS gotchas
+# Cleanup catalog
 
-Reference for building and executing the cleanup plan. Each entry: what it is, the
-tier, and the safest way to reclaim. Prefer app-native commands over `rm`.
+Read the relevant section when classifying or removing a measured target.
 
-## Table of contents
-- [macOS gotchas you must know](#macos-gotchas-you-must-know)
-- [Developer / package-manager caches](#developer--package-manager-caches)
-- [Xcode & iOS simulators](#xcode--ios-simulators)
-- [Docker](#docker)
-- [Browser & app caches](#browser--app-caches)
-- [node_modules & project artifacts](#node_modules--project-artifacts)
-- [System-level space (needs sudo)](#system-level-space-needs-sudo)
-- [What NOT to touch](#what-not-to-touch)
+- [Storage accounting and access](#storage-accounting-and-access)
+- [Package-manager caches](#package-manager-caches)
+- [Xcode and iOS simulators](#xcode-and-ios-simulators)
+- [Docker engines and storage](#docker-engines-and-storage)
+- [Browser caches and user content](#browser-caches-and-user-content)
 
----
+For Swift build copies, agent-tool storage, and Android SDK components, see
+[developer-storage.md](developer-storage.md).
 
-## macOS gotchas you must know
+## Storage accounting and access
 
-**`df` lies on modern macOS.** On APFS the boot drive is split into a sealed,
-read-only *System* volume and a *Data* volume that share one container. `df -h /`
-often shows the tiny System volume. The number that matters is the **container
-free space** from `diskutil info /` — that's what the scanner reports.
+On modern macOS, System and Data volumes share an APFS container. `df /` describes
+the mounted System volume; use `df -k /System/Volumes/Data` consistently for cleanup
+baselines and `diskutil info /` for container capacity/free space. The scanner
+falls back to `/` on systems without the Data-volume mount.
 
-**Purgeable space.** macOS reports space as "used" that it can reclaim on demand
-(old snapshots, cache files, redownloadable content). Finder's storage bar shows a
-"Purgeable" slice. You can't always free it with `rm`; sometimes it clears only
-under pressure or when snapshots are thinned.
+`du` normally reports allocated blocks, not logical file length. Neither it nor a
+file's logical size proves the space a deletion will recover:
 
-**APFS local snapshots** (from Time Machine) can silently hold gigabytes. List and
-thin them:
-```bash
-tmutil listlocalsnapshots /
-# thin: free up to <bytes>, urgency 1 (low) .. 4 (high)
-sudo tmutil thinlocalsnapshots / 21474836480 4   # try to free ~20GB
-```
-After deleting large files, freed space may stay purgeable until snapshots roll
-off — re-check `diskutil info /` rather than trusting `df` immediately.
+- APFS clones can share blocks between a project's `.build` and an external cache.
+- A sparse VM image can have a large logical capacity but occupy few host blocks.
+- Mounted runtime contents are another view of a backing image. Do not add both.
+- Docker images can share layers. Prefer the engine's reclaimable estimate.
+- Snapshots, retained downloads, deferred deletion, and concurrent writes can alter
+  the observed free-space change. A shortfall alone does not identify its cause.
 
-**SIP (System Integrity Protection)** blocks writes/deletes under `/System` and
-parts of `/usr`, `/Library`. If a delete is "permission denied" there, that's SIP
-doing its job — don't try to defeat it.
+Record before/after free space in one unit, preferably bytes or KiB, then convert
+for display. Do not attribute changes elsewhere in the session to one cleanup.
 
----
+A failed `diskutil`, `tmutil`, or simulator query is unknown. Sandbox restrictions
+can prevent service access; a scoped read-only retry with authorized host access
+can distinguish that from an application failure. Permission denied does not by
+itself establish SIP protection. Never defeat SIP or manually purge protected
+system assets.
 
-## Developer / package-manager caches
+`tmutil listlocalsnapshots /` inventories Time Machine local snapshots only. If
+snapshot cleanup is actually warranted and approved, consult `tmutil help` before
+using `thinlocalsnapshots`; do not prescribe thinning solely because `du` and free
+space differ.
 
-All 🟢 SAFE — these are pure caches; the tools refill them on next use.
+The scanner's outside-home/apps figure is a rough accounting residual, not a list
+of disposable system files. It includes other volumes, unreadable paths, shared
+storage, and system-managed data. Optional read-only probes, when authorized:
 
-| Target | Reclaim command |
-|---|---|
-| npm | `npm cache clean --force` |
-| Yarn | `yarn cache clean` |
-| pnpm | `pnpm store prune` |
-| Bun | `bun pm cache rm` |
-| Homebrew | `brew cleanup --prune=all` (and `brew autoremove`) |
-| Gradle | `rm -rf ~/.gradle/caches` (rebuilds on next build) |
-| CocoaPods | `pod cache clean --all` |
-| Go build cache | `go clean -cache` |
-| Rust/cargo | `cargo cache --autoclean` (needs `cargo-cache`) or trim `~/.cargo/registry/cache` |
-| pip | `rm -rf ~/Library/Caches/pip` |
-| Generic | inspect `~/.cache/*` and `~/Library/Caches/*` — most subdirs are app caches |
-
-🟠 **CHECK:** `~/.nvm/versions` — old Node versions. `nvm ls` first; some may be
-the default a project pins. `nvm uninstall <version>` to drop one.
-
----
-
-## Xcode & iOS simulators
-
-Big and easy on dev machines.
-
-- 🟢 **DerivedData** — build intermediates, fully regenerable:
-  `rm -rf ~/Library/Developer/Xcode/DerivedData/*`
-- 🟢 **Unavailable simulators** — runtimes/devices for OS versions you no longer
-  have: `xcrun simctl delete unavailable`
-- 🟢 **Old iOS DeviceSupport** — symbol files per iOS version; Xcode re-downloads
-  when you connect a device on that version. Delete old version folders in
-  `~/Library/Developer/Xcode/iOS DeviceSupport/`.
-- 🟠 **Archives** (`~/Library/Developer/Xcode/Archives`) — CHECK. These are your
-  built `.xcarchive`s; you need them to re-submit/notarize a release. Keep recent
-  ones, delete stale.
-- 🟢 **Simulator devices data** (`CoreSimulator/Devices`) — `xcrun simctl delete
-  unavailable` is the safe lever; to reset everything (loses sim app data):
-  `xcrun simctl erase all`.
-
----
-
-## Docker
-
-Often the single biggest win on a dev Mac — the Linux VM disk image
-(`~/Library/Containers/com.docker.docker/.../Docker.raw` or `docker.raw`) grows and
-**does not shrink on its own**, even when the daemon is stopped.
-
-🟡 **APP-MANAGED — never `rm` the .raw file.** Use Docker's own pruning:
-```bash
-docker system df                     # see what's using space
-docker system prune -a --volumes     # remove unused images, containers, networks, volumes
-docker builder prune -a              # build cache
-```
-If the image file is still huge after pruning, reclaim via **Docker Desktop →
-Settings → Resources → Advanced** (lower disk image size) or **Troubleshoot →
-Clean / Purge data**. If the user doesn't use Docker, uninstalling Docker Desktop
-removes the whole image directory cleanly.
-
-⚠️ `prune --volumes` deletes named volumes — that's real data (databases etc.).
-Confirm the user doesn't need any volume data first.
-
----
-
-## Browser & app caches
-
-- 🟡 **Chrome/Brave/Edge cache** (`~/Library/Caches/Google`, etc.) — clearing via
-  the browser (Settings → Privacy → Clear browsing data → Cached images/files) is
-  cleaner than `rm`, though deleting the cache dir is generally safe too. Don't
-  delete the *profile* (`~/Library/Application Support/Google/Chrome`) — that's
-  bookmarks, history, logins.
-- 🟠 **ML / model caches** (e.g. FluidAudio, HuggingFace `~/.cache/huggingface`,
-  Ollama models `~/.ollama/models`) — CHECK. Large and re-downloadable, but the
-  re-download can be gigabytes/slow. Confirm before removing.
-- 🟢 **App caches generally** — `~/Library/Caches/<app>` is regenerable. The app's
-  *Application Support* and *Containers* dirs are NOT cache — leave those.
-
----
-
-## node_modules & project artifacts
-
-🟠 **CHECK (per project).** `node_modules` in dormant projects is dead weight —
-reinstall with `npm/yarn/pnpm install` when you return to the project. Run the
-scanner with `--deep` to list the biggest ones, then:
-```bash
-# safe: only removes node_modules, never source
-find ~/CODE -maxdepth 4 -type d -name node_modules -prune -exec du -sh {} \;
-# delete a specific one:
-rm -rf /path/to/project/node_modules
-```
-Tools like `npkill` (`npx npkill`) give an interactive picker. Only remove from
-projects the user isn't actively building. Other reclaimable build artifacts:
-`.next`, `dist`, `build`, `target` (Rust), `.gradle` project caches, Pods/.
-
----
-
-## System-level space (needs sudo)
-
-If ACCOUNTING shows lots of space outside home+apps, investigate with the user
-running these (they prompt for a password — suggest the user run them via `!` in
-the session so output lands here):
 ```bash
 sudo du -xhd 1 /System/Volumes/Data 2>/dev/null | sort -h | tail -15
-sudo du -xhd 1 /private/var 2>/dev/null | sort -h | tail -10
 sudo du -xhd 1 /Library 2>/dev/null | sort -h | tail -10
+sudo du -xhd 1 /private/var 2>/dev/null | sort -h | tail -10
 ```
-Common system-level consumers: `/private/var/vm` (sleepimage/swap — managed by
-macOS, leave it), `/Library/Developer/CoreSimulator` (shared sim runtimes —
-`xcrun simctl delete unavailable` covers these), other user accounts, and large
-files in `/private/var/folders` caches.
 
----
+Those suppressed errors make the results partial; report that limitation. Leave
+swap/sleep state and unidentified system storage to macOS.
 
-## What NOT to touch
+## Package-manager caches
 
-🔴 Leave these alone unless you know exactly what a specific subitem is:
-- `~/Library/Application Support/*` — app *data* (settings, projects, databases),
-  not cache. Deleting loses real work.
-- `~/Library/Containers/*` and `~/Library/Group Containers/*` — sandboxed app
-  state. (Exception: an app's own *cache* subfolder inside, but be precise.)
-- Anything under `/System`, much of `/Library`, `/usr` — SIP-protected and/or
-  OS-critical.
-- `/private/var/vm` — swap/sleepimage, managed by macOS.
-- Mail, Messages, Photos libraries via `rm` — clean through the app instead, or
-  you'll corrupt the library.
+Measure the configured cache location. Use only commands for installed tools.
 
-Golden rule: **cache = safe, data = dangerous.** When a path's name doesn't make
-the distinction obvious, treat it as data and ask.
+| Candidate | Preferred cleanup after approval |
+|---|---|
+| npm content cache | `npm cache clean --force` |
+| Yarn | `yarn cache clean` |
+| pnpm store | `pnpm store prune` |
+| Bun | `bun pm cache rm` |
+| Homebrew | Preview `brew cleanup --prune=all --dry-run`, then `brew cleanup --prune=all` |
+| CocoaPods | `pod cache clean --all` |
+| Go build cache | `go clean -cache` |
+| Gradle caches | Remove the selected cache directory after builds/daemons using it have stopped |
+| pip cache | `python3 -m pip cache purge`, if this is the environment owning the cache |
+
+Treat `brew autoremove` as a separate package-removal decision. Installed Node
+versions also need inspection: check project pins, current/default versions, and
+then use `nvm uninstall <approved-version>`.
+
+For a cache command that fails because of cwd or missing tooling, verify the exact
+cache path before considering scoped removal. Avoid deleting all of `~/.cache`,
+`~/.npm`, or `~/Library/Caches` without inspecting their contents.
+
+## Xcode and iOS simulators
+
+Distinguish these targets before estimating savings:
+
+| Target | Discovery and consequence |
+|---|---|
+| DerivedData | Build products and downloaded packages; recreatable, but the next build can be expensive. Check for active builds. |
+| Archives | Release archives/symbols may be needed later. Select individually. |
+| DeviceSupport | Inspect version folders; retain versions needed for current physical-device development. |
+| Simulator devices | Installed test apps, settings, and saved device data. Removal loses that state. |
+| Simulator runtimes | Shared OS images supporting devices; removal requires a later download to run that OS. |
+
+Use the installed tool's help and live inventory:
+
+```bash
+xcrun simctl list devices --json
+xcrun simctl list devices unavailable
+xcrun simctl runtime list --json
+```
+
+`xcrun simctl delete unavailable` deletes unavailable **devices**. The total size of
+`CoreSimulator/Devices` is not the size reclaimable by that command, and it does
+not uninstall shared runtimes. Unavailable device state may still matter to the
+user; it is not an ordinary cache.
+
+For specifically approved targets:
+
+```bash
+xcrun simctl delete <device-uuid>
+xcrun simctl runtime delete <runtime-image-identifier>
+```
+
+Use the identifier from the relevant inventory, not a remembered UUID. Check for
+booted devices and explain any required shutdown. Avoid blanket `erase all` or
+runtime deletion when the user selected one device.
+
+Runtime verification has two parts: inventory removal and actual host-space
+recovery. An observed iOS runtime uninstall left a MobileAsset download under
+`/System/Library/AssetsV2` even though `simctl` listed no runtimes. Treat retained
+assets as an explicit unresolved storage condition; do not claim the full image
+size was freed or provide a raw deletion recipe for that protected location.
+
+## Docker engines and storage
+
+First establish which engine the user uses. Docker Desktop, Colima, and other
+engines can retain separate VM disks on the same Mac.
+
+```bash
+docker context ls
+docker context show
+docker --context <chosen-context> system df -v
+docker --context <chosen-context> ps -a
+docker --context <chosen-context> image ls -a
+docker --context <chosen-context> volume ls
+```
+
+Keep the explicit context on every mutation. A stopped engine may need the user
+to start its app before inventory is possible. A failure in one engine is not
+proof that another engine is broken. Real VM I/O errors are a reason to stop
+pruning that engine and discuss diagnosis, not reset it or delete its disk image.
+
+Compare `ls -lh` logical VM capacity with `du -h` allocated host storage. Inventory
+containers and their mounts before proposing image or volume removal. An image
+with zero container references may still be used for future builds or tests;
+retain versions the user says they need.
+
+Prefer selected removal:
+
+```bash
+docker --context <chosen-context> image rm <approved-image-id-or-tag>
+```
+
+Do not force removal when Docker reports a reference. A stopped container can
+hold wanted state and keep an image in use. Inspect build cache separately; if
+nonzero and approved, use the engine's supported builder cleanup.
+
+Broad `system prune -a --volumes` is not the default recipe. Check the installed
+command's help: current `system prune --volumes` targets anonymous volumes, while
+`volume prune --all` also includes named volumes. **Both kinds can hold real
+database data**, and zero links does not establish disposability.
+
+After cleanup, verify the selected images are gone, retained images/containers
+remain, and host free space changed. Internal Docker savings need not immediately
+match host-file shrinkage. Disk reset, purge-data UI, or uninstalling an engine is
+a separate destructive scope.
+
+## Browser caches and user content
+
+Clear browser cached images/files through the browser when practical. Preserve
+cookies, passwords, history, profiles, and site data unless specifically approved.
+Inspect `~/Library/Caches/Google` for ownership instead of equating all Google
+storage with one browser cache.
+
+Downloads and Trash are CHECK targets; neither is inherently regenerable. Inspect
+before deleting or emptying them. Photos, Mail, Messages, application databases,
+and agent conversation history should be managed through their owning apps.
+
+Model weights such as FluidAudio, Hugging Face, or Ollama downloads are CHECK
+items even inside a cache directory. Verify which application needs them and
+explain the download cost before removal.

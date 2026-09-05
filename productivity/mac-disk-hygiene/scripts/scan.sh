@@ -1,151 +1,168 @@
 #!/usr/bin/env bash
-# mac-disk-hygiene scanner — READ ONLY. Measures disk usage and surfaces
-# reclaimable space. Never deletes anything. Safe to run anytime.
-#
-# Usage:
-#   scan.sh            fast scan (no full-disk finds)
-#   scan.sh --deep     also hunt node_modules / Python venvs (slower)
-#
-# Design notes for the model reading this output:
-#   - Numbers are real du measurements (apparent disk usage, -x = stay on
-#     one filesystem so we don't double-count mounts).
-#   - The "KNOWN RECLAIMABLE" section lists targets that have a safe,
-#     app-native reclaim command. Prefer those commands over `rm`.
-#   - "DISCOVERY" drills into the parents that hide big stuff (Docker lives
-#     inside Containers; tool data hides in dotdirs). Top-level du misses these.
-#   - "ACCOUNTING" tells you how much used space is OUTSIDE home+/Applications
-#     (i.e. system-level, needs sudo). Don't silently ignore it.
-
+# Read-only disk discovery. Sizes are allocated blocks, not guaranteed recovery.
+# Usage: bash scan.sh [--deep]
 set -uo pipefail
-DEEP=0
-[[ "${1:-}" == "--deep" ]] && DEEP=1
-HOME_DIR="${HOME}"
 
-# human-readable from KB
-hr() { awk -v k="$1" 'BEGIN{
-  split("K M G T",u); s=k; i=1;
-  while (s>=1024 && i<4){ s/=1024; i++ }
-  printf "%6.1f %s", s, u[i]
-}'; }
-
-# measure a path in KB (apparent, one filesystem); echo "" if missing
-sizek() { [[ -e "$1" ]] && du -skx "$1" 2>/dev/null | cut -f1 || echo ""; }
-
-line() { printf '%s\n' "────────────────────────────────────────────────────────"; }
-
-echo "MAC DISK HYGIENE SCAN — $(date '+%Y-%m-%d %H:%M')   (read-only)"
-line
-
-# ── OVERVIEW ────────────────────────────────────────────────────────────
-echo "## OVERVIEW"
-df -h / | sed 's/^/  /'
-echo
-# Real Data-volume numbers (df shows the sealed system volume on modern macOS)
-diskutil info / 2>/dev/null | grep -iE "container total space|container free space|volume free space" | sed 's/^ */  /'
-echo
-echo "  Purgeable / local snapshots (df can show space as 'used' that is reclaimable):"
-SNAPS=$(tmutil listlocalsnapshots / 2>/dev/null | grep -c 'com.apple')
-echo "    APFS local snapshots: ${SNAPS:-0}  (reclaim: tmutil thinlocalsnapshots / <bytes> <urgency>)"
-echo
-
-# ── KNOWN RECLAIMABLE TARGETS ───────────────────────────────────────────
-# Format: path|tier|reclaim-command
-# tier: SAFE (regenerable cache) | APP (use the app's own cleanup) | CHECK (inspect first)
-echo "## KNOWN RECLAIMABLE  (sorted by size; prefer the listed command over rm)"
-TARGETS=(
-  "$HOME_DIR/Library/Caches|SAFE|inspect subdirs; most are regenerable app caches"
-  "$HOME_DIR/.npm/_cacache|SAFE|npm cache clean --force"
-  "$HOME_DIR/.cache|SAFE|regenerable tool caches (inspect subdirs)"
-  "$HOME_DIR/.bun/install/cache|SAFE|bun pm cache rm"
-  "$HOME_DIR/Library/Caches/Homebrew|SAFE|brew cleanup --prune=all"
-  "$HOME_DIR/Library/Caches/Yarn|SAFE|yarn cache clean"
-  "$HOME_DIR/Library/pnpm/store|SAFE|pnpm store prune"
-  "$HOME_DIR/Library/Developer/Xcode/DerivedData|SAFE|rm contents; Xcode rebuilds it"
-  "$HOME_DIR/Library/Developer/Xcode/Archives|CHECK|old app archives — keep ones you may resubmit"
-  "$HOME_DIR/Library/Developer/Xcode/iOS DeviceSupport|SAFE|delete old iOS version folders; Xcode re-downloads"
-  "$HOME_DIR/Library/Developer/CoreSimulator/Devices|SAFE|xcrun simctl delete unavailable"
-  "$HOME_DIR/Library/Developer/CoreSimulator/Caches|SAFE|simulator caches, regenerable"
-  "$HOME_DIR/.gradle/caches|SAFE|gradle caches, regenerable"
-  "$HOME_DIR/.nvm/versions|CHECK|old Node versions — nvm ls, then nvm uninstall <v>"
-  "$HOME_DIR/Library/Containers/com.docker.docker|APP|docker system prune -a --volumes (or Docker Desktop > Troubleshoot > Purge data; uninstall if unused)"
-  "$HOME_DIR/Library/Application Support/Code/Cache|SAFE|VS Code cache"
-  "$HOME_DIR/Library/Application Support/Code/CachedData|SAFE|VS Code cached data"
-  "$HOME_DIR/Library/Caches/Google|APP|Chrome cache — clear via Chrome or delete"
-  "$HOME_DIR/.Trash|SAFE|empty Trash"
-)
-{
-  for entry in "${TARGETS[@]}"; do
-    p="${entry%%|*}"; rest="${entry#*|}"; tier="${rest%%|*}"; cmd="${rest#*|}"
-    k=$(sizek "$p")
-    [[ -z "$k" || "$k" -lt 51200 ]] && continue   # skip <50MB and missing
-    printf '%d\t%s\t%s\t%s\n' "$k" "$tier" "$p" "$cmd"
-  done
-} | sort -rn | while IFS=$'\t' read -r k tier p cmd; do
-  printf "  %s  [%-5s] %s\n             ↳ %s\n" "$(hr "$k")" "$tier" "${p/#$HOME_DIR/~}" "$cmd"
-done
-echo
-
-# ── DISCOVERY: drill into the fat parents top-level du misses ────────────
-echo "## DISCOVERY  (big items that hide inside parents — judge tier yourself)"
-discover() {
-  local parent="$1" n="${2:-6}"
-  [[ -d "$parent" ]] || return
-  echo "  ${parent/#$HOME_DIR/~}/*  (top $n):"
-  du -shx "$parent"/* 2>/dev/null | sort -h | tail -"$n" | sed 's/^/    /'
+hr() {
+  awk -v k="$1" 'BEGIN {
+    split("KiB MiB GiB TiB", u); i=1
+    while (k>=1024 && i<4) { k/=1024; i++ }
+    printf "%.1f %s", k, u[i]
+  }'
 }
-discover "$HOME_DIR/Library/Containers" 6
-discover "$HOME_DIR/Library/Application Support" 6
-discover "$HOME_DIR/Library/Caches" 6
-echo "  ~/.<dotdirs>  (top 8):"
-du -shx "$HOME_DIR"/.[a-zA-Z]* 2>/dev/null | sort -h | tail -8 | sed 's/^/    /'
-echo "  ~/* top-level dirs (top 8):"
-du -shx "$HOME_DIR"/* 2>/dev/null | sort -h | tail -8 | sed 's/^/    /'
-echo "  /Applications (top 6):"
-du -shx /Applications/* 2>/dev/null | sort -h | tail -6 | sed 's/^/    /'
-echo
 
-# ── DEEP: heavy finds (opt-in) ──────────────────────────────────────────
-if [[ "$DEEP" == "1" ]]; then
-  echo "## DEEP  (node_modules in project roots — dormant projects are easy wins)"
-  ROOTS=()
-  for r in "$HOME_DIR/CODE" "$HOME_DIR/Projects" "$HOME_DIR/dev" "$HOME_DIR/src" "$HOME_DIR/work"; do
-    [[ -d "$r" ]] && ROOTS+=("$r")
-  done
-  if [[ ${#ROOTS[@]} -gt 0 ]]; then
-    find "${ROOTS[@]}" -maxdepth 4 -type d -name node_modules -prune 2>/dev/null | while read -r nm; do
-      k=$(du -skx "$nm" 2>/dev/null | cut -f1); printf '%d\t%s\n' "${k:-0}" "$nm"
-    done | sort -rn | head -15 | while IFS=$'\t' read -r k p; do
-      printf "    %s  %s\n" "$(hr "$k")" "${p/#$HOME_DIR/~}"
-    done
-    echo "    ↳ delete node_modules in projects you're not actively building; reinstall with npm/yarn/pnpm install"
+# Only leaf candidates go in this table. Parent totals are discovery, never added.
+candidate() {
+  local p="$1" tier="$2" action="$3" measured k
+  [[ -e "$p" ]] || return 0
+  if measured=$(du -skx "$p" 2>/dev/null); then
+    k=$(printf '%s\n' "$measured" | awk 'NR==1 {print $1}')
+    if [[ "$k" =~ ^[0-9]+$ ]]; then
+      (( k < 51200 )) || printf '%s\t%s\t%s\t%s\n' "$k" "$tier" "$p" "$action"
+    else
+      printf '  Unknown size: %s\n' "$p" >&2
+    fi
   else
-    echo "    (no common project roots found — pass roots manually if needed)"
+    printf '  Unknown/partial size (read failed): %s\n' "$p" >&2
   fi
-  echo
-fi
+}
 
-# ── ACCOUNTING: how much lives outside home + /Applications ──────────────
-echo "## ACCOUNTING"
-USED_K=$(diskutil info / 2>/dev/null | awk -F'[()]' '/Container Free Space/{} /Container Total Space/{t=$2} /Container Free Space/{f=$2} END{}' )
-TOTAL_BYTES=$(diskutil info / 2>/dev/null | awk -F'[()]' '/Container Total Space/{gsub(/[^0-9]/,"",$2); print $2; exit}')
-FREE_BYTES=$(diskutil info / 2>/dev/null | awk -F'[()]' '/Container Free Space/{gsub(/[^0-9]/,"",$2); print $2; exit}')
-HOME_K=$(du -skx "$HOME_DIR" 2>/dev/null | cut -f1)
-APPS_K=$(du -skx /Applications 2>/dev/null | cut -f1)
-if [[ -n "${TOTAL_BYTES:-}" && -n "${FREE_BYTES:-}" ]]; then
-  USED_K=$(( (TOTAL_BYTES - FREE_BYTES) / 1024 ))
-  ACCT_K=$(( ${HOME_K:-0} + ${APPS_K:-0} ))
-  UNACCT_K=$(( USED_K - ACCT_K ))
-  echo "  Used (Data volume):        $(hr "$USED_K")"
-  echo "  ~/ (home):                 $(hr "${HOME_K:-0}")"
-  echo "  /Applications:             $(hr "${APPS_K:-0}")"
-  echo "  Outside home + apps:       $(hr "$UNACCT_K")   ← system-level, needs sudo to investigate"
+# One traversal provides the immediate children and the parent total.
+# Expose incomplete reads instead of presenting partial accounting as exact.
+LAST_TOTAL_K=''
+discover() {
+  local parent="$1" limit="${2:-8}" measured complete=1
+  LAST_TOTAL_K=''
+  [[ -d "$parent" ]] || return 0
+  echo "  $parent (largest immediate children; not additional reclaimable totals):"
+  measured=$(du -kxd 1 "$parent" 2>/dev/null) || complete=0
+  printf '%s\n' "$measured" | awk -F '\t' -v p="$parent" '$2 != p && $1 ~ /^[0-9]+$/ {print}' |
+    sort -rn | head -n "$limit" |
+    while IFS=$'\t' read -r k path; do
+      printf '    %10s  %s\n' "$(hr "$k")" "$path"
+    done
+  if (( complete )); then
+    LAST_TOTAL_K=$(printf '%s\n' "$measured" | awk -F '\t' -v p="$parent" '$2 == p {print $1}')
+  else
+    echo '    Partial listing: some paths could not be read.'
+  fi
+}
+
+scan() {
+  local HOME_DIR="$1" DEEP="$2"
+  local DATA_VOLUME=/System/Volumes/Data
+  [[ -d "$DATA_VOLUME" ]] || DATA_VOLUME=/
+  printf 'MAC DISK HYGIENE SCAN - %s (read-only)\n' "$(date '+%Y-%m-%d %H:%M')"
+  echo '## OVERVIEW'
+  df -k "$DATA_VOLUME"
+  DISK_INFO=''
+  if DISK_INFO=$(diskutil info / 2>/dev/null); then
+    printf '%s\n' "$DISK_INFO" | awk '/Container Total Space|Container Free Space/ {print}'
+  else
+    echo '  APFS container information unavailable; use the df baseline above.'
+  fi
+  if SNAPSHOTS=$(tmutil listlocalsnapshots / 2>/dev/null); then
+    SNAP_COUNT=$(printf '%s\n' "$SNAPSHOTS" | awk '/^com\.apple\.TimeMachine\./ {n++} END {print n+0}')
+    echo "  Time Machine local snapshots: $SNAP_COUNT (not all APFS snapshots)."
+  else
+    echo '  Time Machine local snapshots: unknown (query failed).'
+  fi
+
   echo
-  echo "  To probe system-level space, the user can run (will prompt for password):"
-  echo "    sudo du -xhd 1 /System/Volumes/Data 2>/dev/null | sort -h | tail -15"
-  echo "    sudo du -xhd 1 /private/var 2>/dev/null | sort -h | tail -10"
-else
-  echo "  (could not parse diskutil totals; skipping accounting)"
+  echo '## CANDIDATES (measured size, not a deletion plan or guaranteed recovery)'
+  {
+    candidate "$HOME_DIR/.npm/_cacache" SAFE 'npm cache clean --force'
+    candidate "$HOME_DIR/.npm/_npx" CHECK 'verify temporary packages and active commands; scoped removal'
+    candidate "$HOME_DIR/.cache/codex-runtimes" CHECK 'verify runtime ownership and active use; see developer-storage.md'
+    candidate "$HOME_DIR/.bun/install/cache" SAFE 'bun pm cache rm'
+    candidate "$HOME_DIR/Library/Caches/Homebrew" SAFE 'brew cleanup --prune=all --dry-run, then approved cleanup'
+    candidate "$HOME_DIR/Library/Caches/Yarn" SAFE 'yarn cache clean'
+    candidate "$HOME_DIR/Library/Caches/org.swift.swiftpm" SAFE 'shared Swift cache; check active builds before scoped removal'
+    candidate "$HOME_DIR/Library/pnpm/store" SAFE 'pnpm store prune'
+    candidate "$HOME_DIR/Library/Developer/Xcode/DerivedData" SAFE 'check active builds; remove selected build outputs'
+    candidate "$HOME_DIR/Library/Developer/Xcode/Archives" CHECK 'inspect release archives and symbols'
+    candidate "$HOME_DIR/Library/Developer/Xcode/iOS DeviceSupport" CHECK 'select versions after checking physical-device needs'
+    candidate "$HOME_DIR/Library/Developer/CoreSimulator/Devices" CHECK 'simctl device inventory; total is NOT unavailable-device reclaim'
+    candidate "$HOME_DIR/Library/Developer/CoreSimulator/Caches" CHECK 'verify cache ownership and simulator activity'
+    candidate "$HOME_DIR/.gradle/caches" SAFE 'check active builds/daemons; scoped cache removal'
+    candidate "$HOME_DIR/.nvm/versions" CHECK 'check project pins and active versions; nvm uninstall selected version'
+    candidate "$HOME_DIR/Library/Containers/com.docker.docker" APP 'Docker Desktop store; choose context and inventory images/volumes first'
+    candidate "$HOME_DIR/.colima" APP 'separate Colima VM store; choose context and inventory first'
+    candidate "$HOME_DIR/Library/Application Support/RepoPrompt CE/Conductor/BuildCache" APP 'conductor cache status; drop approved keys; see developer-storage.md'
+    candidate "$HOME_DIR/.claude/telemetry" CHECK 'inspect failed-event file set; preserve history; see developer-storage.md'
+    candidate "$HOME_DIR/Library/Application Support/Code/Cache" SAFE 'verified VS Code cache; scoped cleanup'
+    candidate "$HOME_DIR/Library/Application Support/Code/CachedData" SAFE 'verified VS Code cached data; scoped cleanup'
+    candidate "$HOME_DIR/Library/Caches/Google" APP 'inspect owner; browser cached images/files cleanup'
+    candidate "$HOME_DIR/.Trash" CHECK 'inspect user content; explicit approval to empty'
+
+    ANDROID_SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME_DIR/Library/Android/sdk}}"
+    ANDROID_AVDS="${ANDROID_AVD_HOME:-${ANDROID_USER_HOME:-$HOME_DIR/.android}/avd}"
+    candidate "$ANDROID_AVDS" CHECK 'Android virtual-device state; list/select AVDs first'
+    candidate "$ANDROID_SDK/system-images" APP 'Android runtime downloads; SDK Manager removal after selection'
+    candidate "$ANDROID_SDK/emulator" APP 'emulator program; preserve adb/build SDK; SDK Manager uninstall'
+  } | sort -rn | while IFS=$'\t' read -r k tier path action; do
+    printf '  %10s [%s] %s\n    %s\n' "$(hr "$k")" "$tier" "$path" "$action"
+  done
+  echo '  No candidate sum: approval, shared blocks, and target overlap require review.'
+  echo '  Inventory shared iOS runtimes separately with: xcrun simctl runtime list --json'
+  echo '  Verify configured Android paths; project/IDE overrides may differ from these defaults.'
+
+  echo
+  echo '## DISCOVERY (inspect large parents; never delete them wholesale)'
+  discover "$HOME_DIR/Library/Containers" 6
+  discover "$HOME_DIR/Library/Application Support" 8
+  discover "$HOME_DIR/Library/Caches" 8
+  discover "$HOME_DIR/.cache" 6
+  discover "$HOME_DIR" 12
+  HOME_K="$LAST_TOTAL_K"
+  discover /Applications 6
+  APPS_K="$LAST_TOTAL_K"
+
+  if (( DEEP )); then
+    echo
+    echo '## DEEP (CHECK: project dependencies and Swift build outputs)'
+    ROOTS=()
+    for root in "$HOME_DIR/CODE" "$HOME_DIR/Projects" "$HOME_DIR/dev" "$HOME_DIR/src" "$HOME_DIR/work"; do
+      [[ ! -d "$root" ]] || ROOTS+=("$root")
+    done
+    if (( ${#ROOTS[@]} )); then
+      # Keep find errors visible. Prune matches so their internals are not counted again.
+      find "${ROOTS[@]}" -maxdepth 5 -type d \( -name node_modules -o -name .build \) -prune -print0 |
+        while IFS= read -r -d '' path; do
+          candidate "$path" CHECK 'verify project/activity and cleanup target'
+        done | sort -rn | head -n 15 |
+        while IFS=$'\t' read -r k tier path action; do
+          printf '  %10s [%s] %s\n' "$(hr "$k")" "$tier" "$path"
+        done
+    else
+      echo '  No common project roots found; inspect user-specified roots if relevant.'
+    fi
+  fi
+
+  echo
+  echo '## ACCOUNTING (rough residual, not reclaimable storage)'
+  TOTAL_BYTES=$(printf '%s\n' "$DISK_INFO" | awk -F '[()]' '/Container Total Space/ {gsub(/[^0-9]/,"",$2); print $2; exit}')
+  FREE_BYTES=$(printf '%s\n' "$DISK_INFO" | awk -F '[()]' '/Container Free Space/ {gsub(/[^0-9]/,"",$2); print $2; exit}')
+  if [[ "$TOTAL_BYTES" =~ ^[0-9]+$ && "$FREE_BYTES" =~ ^[0-9]+$ && "$HOME_K" =~ ^[0-9]+$ && "$APPS_K" =~ ^[0-9]+$ ]]; then
+    USED_K=$(( (TOTAL_BYTES - FREE_BYTES) / 1024 ))
+    RESIDUAL_K=$(( USED_K - HOME_K - APPS_K ))
+    printf '  APFS container used: %s\n  Readable home: %s\n  Applications: %s\n' "$(hr "$USED_K")" "$(hr "$HOME_K")" "$(hr "$APPS_K")"
+    printf '  Container used minus home/apps: %s\n' "$(hr "$RESIDUAL_K")"
+    echo '  Different accounting scopes and shared blocks make this approximate; it is not all system junk.'
+  else
+    echo '  Unavailable: container totals or complete home/apps measurements could not be read.'
+  fi
+  echo '  For unexplained usage, see the scoped system probes in references/cleanup-catalog.md.'
+  echo
+  echo 'Scan complete. Nothing was deleted. Review ownership, consequences, and scope before cleanup.'
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+case "${1:-}" in
+  '') DEEP=0 ;;
+  --deep) DEEP=1 ;;
+  -h|--help) echo 'Usage: bash scan.sh [--deep]'; exit 0 ;;
+  *) echo "Unknown option: $1" >&2; exit 2 ;;
+esac
+  scan "$HOME" "$DEEP"
 fi
-echo
-line
-echo "Scan complete. Nothing was deleted. Hand this to the skill to build a ranked, tiered cleanup plan."

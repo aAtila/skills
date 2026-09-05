@@ -4,26 +4,124 @@
     {
       "id": 0,
       "name": "macos-update-blocked-by-space",
-      "prompt": "ugh my macbook says i don't have enough space to install the macOS update, i think i need like 20gb free and i'm nowhere close. it's a 256gb machine. can you figure out what's eating everything and help me clear some out? i do a lot of dev work (react native / expo, some node stuff).",
-      "expected_output": "Runs the read-only scanner first, presents a ranked tiered plan of the biggest reclaimable items (Docker image, caches, simulators, etc.) with sizes and safe reclaim commands, totals up easy wins, and offers to clean tier-by-tier with confirmation rather than deleting blindly. Should surface that a chunk of used space is system-level (needs sudo).",
+      "prompt": "My 256GB Mac cannot install a macOS update. I use Expo, Swift, and Docker. Find the best cleanup candidates first.",
+      "expected_output": "Runs read-only discovery, follows large parents into identified subdirectories, proposes measured targets with consequences and exact cleanup methods, and obtains approval before deletion.",
       "files": [],
-      "assertions": []
+      "assertions": [
+        "Reports the Data-volume/container baseline and any failed probes.",
+        "Does not sum overlapping parent/child sizes or promise a minimum recovery.",
+        "Does not delete anything during discovery."
+      ]
     },
     {
       "id": 1,
       "name": "vague-disk-full-symptom",
-      "prompt": "my mac is basically full again, the storage bar in settings is all red. what's taking up all my space?",
-      "expected_output": "Triggers the skill from the symptom alone, runs the scanner, and reports what's actually consuming space (drilling into hidden parents like Containers/dotdirs, not just top-level du). Distinguishes purgeable space and explains the df-vs-actual gotcha if relevant. Does not start deleting without being asked.",
+      "prompt": "My Mac is basically full again. What is taking up the space?",
+      "expected_output": "Uses the scanner and targeted follow-up reads, distinguishes candidate storage from approved cleanup, and surfaces unknown measurements.",
       "files": [],
-      "assertions": []
+      "assertions": [
+        "Inspects hidden tool storage and large application folders.",
+        "Reports permission/service failures as unknown rather than empty.",
+        "Preserves application data while investigating its largest subdirectories."
+      ]
     },
     {
       "id": 2,
-      "name": "targeted-dev-cache-cleanup",
-      "prompt": "i want to clean up all the developer junk on my mac — old xcode derived data, simulators i don't use, npm/brew caches, that kind of thing. don't touch anything risky though, i've broken my setup before doing this.",
-      "expected_output": "Scans, then proposes only the safe regenerable dev caches (DerivedData, unavailable simulators via simctl, npm/brew cache clean) using app-native commands, explicitly keeping risky items (app data, archives that may be needed) out of scope. Confirms before deleting and honors the user's caution.",
+      "name": "approved-safe-batch",
+      "prompt": "You already measured and proposed npm cache and one named DerivedData folder. I approve both; clean them now. The scan also lists Trash and a live iPhone simulator.",
+      "expected_output": "Rechecks the approved targets and active builds, cleans that batch, and verifies the result without asking again for the same approval.",
       "files": [],
-      "assertions": []
+      "assertions": [
+        "Acts on the two approved targets without redundant confirmation.",
+        "Does not remove Trash or simulator state.",
+        "Uses an immediate before/after baseline."
+      ]
+    },
+    {
+      "id": 3,
+      "name": "nested-conductor-build-cache",
+      "prompt": "RepoPrompt CE Application Support uses 17 GiB. The next level shows Conductor/BuildCache at 10 GiB and Codex/Release sessions and databases at 5 GiB. The repo has a conductor executable. What can we remove?",
+      "expected_output": "Reads developer-storage guidance, verifies current conductor cache commands and keys, and proposes only verified build-cache entries for cleanup.",
+      "files": [],
+      "assertions": [
+        "Does not classify the entire Application Support directory as disposable.",
+        "Discovers keys from current status, not an example or previous run.",
+        "Preserves Codex session databases and task history.",
+        "Uses the native key-locking cache drop command after approval."
+      ]
+    },
+    {
+      "id": 4,
+      "name": "docker-context-and-retained-version",
+      "prompt": "I use Docker Desktop. The active context is colima, whose image inventory returns I/O errors. Desktop is now running: postgres:16 and postgres:18 have zero container references; mysql:8 is referenced by a stopped container. Remove only postgres:16, since I still use v18.",
+      "expected_output": "Targets desktop-linux explicitly, verifies the selected image and references, removes only postgres:16, and checks retained images and host disk space.",
+      "files": [],
+      "assertions": [
+        "Does not diagnose Docker Desktop from Colima errors.",
+        "Does not reset Colima or delete a raw VM disk.",
+        "Does not run broad image/system/volume prune.",
+        "Preserves v18, the MySQL container, and all data volumes."
+      ]
+    },
+    {
+      "id": 5,
+      "name": "apfs-and-sparse-accounting",
+      "prompt": "du shows 11 GiB in a project .build and 10 GiB in an external cloned build cache. Docker.raw has a 60 GB logical size but du reports 2.8 GiB. How much can you guarantee we will recover?",
+      "expected_output": "Explains allocated, logical, shared, and reclaimable storage; proposes measurement after approved cleanup without guaranteeing the sum.",
+      "files": [],
+      "assertions": [
+        "Does not promise 21 GiB from the two build paths.",
+        "Does not advertise 60 GB of Docker reclaimable space.",
+        "Does not infer snapshots or corruption from a recovery mismatch alone."
+      ]
+    },
+    {
+      "id": 6,
+      "name": "simulator-runtime-retained-asset",
+      "prompt": "I approved removing my only simulator and its iOS runtime. simctl now lists zero devices and runtimes, but the MobileAsset backing download remains and free space rose only 3 GiB versus an 8 GiB image estimate.",
+      "expected_output": "Separately verifies device/runtime removal and retained host files, reports partial storage recovery, and leaves protected asset cleanup unresolved unless an authorized supported method is found.",
+      "files": [],
+      "assertions": [
+        "Does not claim the whole 8 GiB was recovered.",
+        "Does not propose raw removal under /System/Library/AssetsV2.",
+        "Does not claim delete unavailable uninstalls shared runtimes."
+      ]
+    },
+    {
+      "id": 7,
+      "name": "android-physical-device-only",
+      "prompt": "I use a physical Android phone. AVD and system-images folders are empty, but sdk/emulator is 965 MiB. Remove the emulator; keep local builds and debugging working. Command-line SDK management is absent.",
+      "expected_output": "Selects only the emulator program, tries an available native cleanup route, and uses a verified scoped fallback if package management is unusable.",
+      "files": [],
+      "assertions": [
+        "Retains adb/platform-tools, build-tools, platforms, and project-required native tooling.",
+        "Does not download a fresh SDK or accept default setup packages just to uninstall.",
+        "Verifies the emulator package is gone and the retained tools still exist."
+      ]
+    },
+    {
+      "id": 8,
+      "name": "claude-failed-telemetry",
+      "prompt": "Clean Claude failed telemetry files. The telemetry directory contains 1p_failed_events.*.json files with one event_type/event_data object per line, plus an unfamiliar notes file and a symlink. Claude projects and settings are elsewhere.",
+      "expected_output": "Checks only necessary file structure, treats the known files as JSON Lines, and deletes only approved matching regular files.",
+      "files": [],
+      "assertions": [
+        "Preserves the notes file and symlink.",
+        "Does not print event payloads or erase projects/settings.",
+        "Reports remaining files and observed disk recovery."
+      ]
+    },
+    {
+      "id": 9,
+      "name": "scanner-failed-probes-and-overlap",
+      "prompt": "The scanner cannot access DiskManagement or Time Machine. It measures Library/Caches at 5 GiB, including 3 GiB of browser cache and 1 GiB of Homebrew cache; the total simulator device folder is 5 GiB but no unavailable device inventory is available.",
+      "expected_output": "Reports unknown snapshot/container state and treats parent directories as investigation totals rather than additional cleanup candidates.",
+      "files": [],
+      "assertions": [
+        "Does not report zero snapshots from a failed command.",
+        "Does not total 9 GiB from the cache parent and its children.",
+        "Does not classify all 5 GiB of device state as safe or reclaimable by delete unavailable."
+      ]
     }
   ]
 }

@@ -1,109 +1,95 @@
 ---
 name: mac-disk-hygiene
 description: >-
-  Diagnose what's eating disk space on a Mac and reclaim it safely. Use this
-  whenever the user is low on storage, can't install a macOS update for lack of
-  space, asks "what's taking up all my space", wants to free up / clean up / clear
-  out their disk, sees "Your disk is almost full", mentions purgeable space, or
-  wants to clean caches, Docker, Xcode/simulator leftovers, node_modules, or
-  package-manager junk. Trigger even when the user only describes the symptom
-  ("my MacBook is full", "running out of space", "need 20GB free") without naming
-  a tool. Measures first (read-only), ranks quick wins by space × safety, then
-  cleans tier-by-tier with the user's confirmation — never deletes blindly.
+  Diagnose disk usage on a Mac and reclaim space safely. Use when storage is low,
+  a macOS update needs more room, or the user wants to inspect or clean caches,
+  Docker storage, simulators, build outputs, or package-manager downloads.
+  Measures first, identifies ownership and cleanup methods, and removes only
+  authorized targets before verifying actual space recovery.
 ---
 
-# Mac Disk Hygiene
+# Mac disk hygiene
 
-Help the user reclaim disk space on macOS without breaking anything. The guiding
-principle is **measure, then cut** — most "clean my Mac" advice flips this and
-deletes by reputation ("clear all caches!"). That's how people lose data or break
-apps. Instead: get real numbers, rank what's worth removing against how safe it is
-to remove, and let the user approve each tier.
+Measure before deleting. Identify what owns each large item, whether it can be
+recreated, and what the user would lose by removing it.
 
-This matters especially on small drives (256GB and under) where the user hits the
-wall regularly and a 25GB Docker image or a forgotten simulator can be the
-difference between updating macOS and not.
+## 1. Scan
 
-## Workflow
-
-### 1. Scan (read-only, always safe)
-
-Run the bundled scanner. It only measures — it never deletes:
+Run the read-only scanner:
 
 ```bash
-bash <skill-dir>/scripts/scan.sh          # fast
-bash <skill-dir>/scripts/scan.sh --deep   # also hunts node_modules in project roots
+bash <skill-dir>/scripts/scan.sh
+bash <skill-dir>/scripts/scan.sh --deep  # also find project dependencies/build outputs
 ```
 
-It prints four sections: **OVERVIEW** (free space + purgeable/snapshots),
-**KNOWN RECLAIMABLE** (targets with a safe reclaim command, ranked by size),
-**DISCOVERY** (big items hiding inside Containers / Application Support / Caches /
-dotdirs that a naive scan misses — Docker and ML model caches love to hide here),
-and **ACCOUNTING** (how much used space lives *outside* home + /Applications, i.e.
-needs sudo).
+It reports free space, candidate directories, large storage parents, and a rough
+accounting check. A candidate's measured size is not its reclaimable size. Missing
+permissions or unavailable services mean unknown, not empty or corrupt.
 
-Why a script and not ad-hoc `du`: the big wins are reliably the ones a one-liner
-misses. Docker's VM image sits two levels deep inside `Containers/`; tool data
-hides in dotdirs that `du ~/*` skips entirely. The script drills into those
-parents every time so you don't rediscover them by hand.
+Follow the largest findings. Inspect large Application Support, Containers, and
+dot-directories one level deeper to distinguish caches, runtime downloads, build
+copies, databases, and user content. A parent directory is an investigation lead,
+not a deletion target. Verify unfamiliar paths against the owning app's commands,
+configuration, or source before classifying them.
 
-### 2. Build the plan
+Read [cleanup-catalog.md](references/cleanup-catalog.md) for APFS accounting,
+Docker engines, iOS simulator storage, and standard cleanup commands. When the
+scan finds developer or agent-tool storage, read
+[developer-storage.md](references/developer-storage.md) for Swift build copies,
+Conductor, failed telemetry, and Android SDK components.
 
-Read the scan output and present a **ranked, tiered plan** — biggest, safest wins
-first. Use the tier system below. For each item give: size, what it is, the tier,
-and the exact reclaim command. Total up "easy reclaim" (the SAFE tier) separately
-so the user sees the floor.
+Finish discovery with measured, non-overlapping targets and explicit unknowns.
+Use scoped follow-up measurements instead of repeatedly scanning the whole home.
 
-If the ACCOUNTING section shows a lot of space outside home+apps, say so plainly
-and offer the `sudo` probes — don't pretend the home dir is the whole story.
+## 2. Classify and propose
 
-### 3. Clean tier by tier, with confirmation
+For each candidate give its size, owner/purpose, consequence of removal, tier, and
+exact cleanup command or app action. Keep these distinctions:
 
-Deleting files is hard to undo, so confirm before each tier and **prefer the app's
-own cleanup command over raw `rm`** (e.g. `brew cleanup`, `xcrun simctl delete
-unavailable`, `docker system prune`). App-native commands know what's safe to drop
-and keep the app's bookkeeping consistent; a blind `rm` can leave an app confused.
+| Tier | Meaning |
+|---|---|
+| SAFE | Verified regenerable caches/build outputs. Check for active users of the files before cleaning. |
+| APP-MANAGED | Use the owning app's cleanup mechanism to preserve its bookkeeping. This describes the method, not permission to delete its data. |
+| CHECK | Inspect and select first: device data, archives, downloads, Trash, project dependencies, installed tool versions, models, or unfamiliar files. |
+| LEAVE ALONE | Unclassified application/user data and protected system state. Investigate ownership rather than deleting the parent. |
 
-Start with the SAFE tier (regenerable caches — near-zero risk), confirm, execute,
-then move to APP and CHECK tiers one at a time. Never batch-delete across tiers
-without re-confirming.
+A verified cache inside Application Support can be a cleanup candidate. Conversely,
+a file inside a cache directory can hold costly model weights or a runtime in use.
 
-### 4. Re-measure and report
+Sum only non-overlapping, approved candidate estimates. Label the sum as an
+estimate, never a guaranteed minimum: APFS clones, shared image layers, snapshots,
+and concurrent disk activity can change recovery. Ask for missing usage context
+when it changes the decision; an unreferenced image may still be wanted later.
 
-After cleaning, re-run `df -h /` (or the scanner) and report actual space freed.
-This closes the loop and catches the macOS gotcha where deleted space stays
-"purgeable" until snapshots are thinned (see the catalog).
+## 3. Clean the authorized scope
 
-## The tier system
+Obtain approval for concrete targets and consequences. Existing approval for
+those targets remains valid; continue without asking again for the same action.
+A broader target, another tier, or data loss outside the approved scope needs new
+approval. Explicit approval can cover a named batch across tiers.
 
-Everything you propose removing falls into one of these. Lead with the rationale,
-not just the label — the user should understand *why* something is safe.
+Prefer app-native cleanup commands. Recheck target identity and relevant active
+builds/devices before removal. For Docker, bind every command to the verified
+engine/context. Remove selected items, preserving other versions and data volumes.
 
-- 🟢 **SAFE — regenerable.** Caches and build artifacts the tool recreates on
-  demand: `~/Library/Caches/*`, DerivedData, `~/.npm`, `~/.cache`, Homebrew cache,
-  unavailable simulators. Worst case after deleting: the next build/launch is
-  slightly slower while the cache rebuilds. Delete freely (with confirmation).
+If a preferred tool is unavailable, identify why. A narrowly scoped fallback is
+reasonable for a verified self-contained disposable package or cache. Avoid
+turning a cleanup into an extended app-setup or repair task. Do not bypass system
+protections or reset a broken VM to reclaim space.
 
-- 🟡 **APP-MANAGED — clean through the app.** Data an app owns where a raw `rm`
-  could corrupt its state: Docker's disk image, browser profiles, Photos library.
-  Use the app's prune/cleanup command or its UI, not `rm`.
+## 4. Verify
 
-- 🟠 **CHECK — inspect first.** Things that look like junk but might be wanted: Xcode
-  Archives (needed to re-submit apps), old Node versions still referenced by a
-  project, ML model caches that are expensive to re-download. Show the user what's
-  there and let them decide.
+Measure free space immediately before and after each approved batch using the same
+filesystem, normally `df -k /System/Volumes/Data`, with `diskutil info /` for APFS
+container information when available. Confirm the owning tool no longer lists the
+target and check whether its backing files remain.
 
-- 🔴 **LEAVE ALONE.** `~/Library/Application Support/*` (app data, not cache),
-  `Containers`/`Group Containers` (sandboxed app state), and anything under
-  `/System`, `/Library`, `/private/var` unless you know exactly what owns it and
-  why it's safe. SIP protects much of this anyway.
+Report separately:
 
-When unsure which tier something is, treat it as more dangerous, not less, and ask.
+- What was removed, and any incomplete removal or retained download.
+- Observed net free-space change and current free space.
+- Any relevant re-download/rebuild cost.
 
-## Detailed reclaim commands and gotchas
-
-For the per-target safe-removal commands, the macOS-specific traps (purgeable
-space, APFS local snapshots, why `df` lies, Docker's hidden image, simulator
-cleanup, node_modules hunting), and copy-pasteable cleanup recipes, read
-`references/cleanup-catalog.md`. Pull it up when building the plan or before
-executing a tier you're less sure about.
+An unregistered runtime with a retained system asset is not full disk recovery.
+A mismatched size is not proof of snapshots or corruption; report the observation
+and verify the cause before prescribing additional cleanup.
