@@ -4,81 +4,92 @@ description: Audit a spec's ticket slicing with cold-read probes before dispatch
 disable-model-invocation: true
 ---
 
-# Slice Check
+# Slice check
 
-Audit the tickets cut from a spec, before any implementation session is spent on them. You are the orchestrator; verdicts on individual tickets come from **cold-read probes** — one subagent per ticket, each seeing only its ticket, because that is exactly what the implementing session will see. Fan out even on small specs: the fan-out is what keeps every read cold, including yours after ticket one.
+Audit the tickets cut from a spec before implementation. Use one independent cold-read probe per open ticket to rehearse a fresh implementation session; combine its evidence with your whole-graph review.
 
-The deliverable is a verdict table. Stop there — splitting, merging, and rewriting tickets is the user's call.
+The deliverable is a verdict table with proposed remedies. Applying ticket changes is a separate task requiring user authorization.
 
-**Cold read** — a reader with no spec, no grilling thread, no sibling tickets. The probe is a rehearsal of the implementer: fresh context, one ticket, the codebase.
-**Smart zone** — the front portion of a context window where the agent still reasons well. A ticket "fits" when its relevant files plus room to plan, edit, and verify stay inside it. Default budget for the files alone: **50k tokens**; the user's number wins if they gave one.
+**Cold read** means fresh context containing one ticket and access to the codebase, with no parent conversation, spec, or sibling tickets.
+**Context budget** is a planning heuristic for source material needed together, with room left to plan, edit, and verify. Default to **50k tokens** for that material unless the user supplies a budget. An estimate above it warrants investigation, not an automatic split.
 
 ## Verdicts
 
-One per ticket, evidence attached:
+Assign evidence-backed verdicts:
 
 | Verdict | Meaning | Evidence required |
 | --- | --- | --- |
-| `fits` | A fresh session can finish it in the smart zone | selection footprint under budget, criteria falsifiable, demo path named |
-| `split` | Too big for one window | selection footprint (tokens) or seam count |
+| `fits` | Context needs and implementation work are manageable in a fresh session | sufficient cold-start context, justified footprint, meaningful falsifiable criteria, independently verifiable contribution |
+| `split` | Too much work or context for one session | footprint or implementation complexity explaining the limit, plus a viable split boundary |
 | `merge` | Over-decomposed; name the sibling(s) to absorb it into | the sibling refs and the shared demo path |
-| `horizontal` | A layer, not a tracer bullet — nothing demoable alone | the criterion that depends on another ticket's work |
-| `criteria` | Acceptance criteria grade nothing | each unfalsifiable criterion, and why it passes at the start commit |
+| `horizontal` | No independently verifiable contribution after declared prerequisites are satisfied | the missing contribution and the later ticket needed to demonstrate it |
+| `criteria` | Acceptance criteria fail to distinguish success from failure | the missing or unfalsifiable criterion, or evidence that it passes at base without checking the intended change |
+| `unclear` | Missing context or evidence prevents a supported verdict | the unresolved decision, unavailable material, or uncertain claim and what would resolve it |
 
-A ticket can carry two verdicts (`split` + `criteria`). `fits` requires all three pieces of evidence — "probably fine" is not a verdict.
+A ticket can carry multiple findings, such as `split` + `criteria`. Use `fits` only when all its evidence requirements are met and no unresolved finding remains.
 
 ## Steps
 
 ### 1. Fetch the graph
 
-Resolve the spec (argument, or the tracker issue the conversation names) and enumerate its tickets: ref, state, blocking edges. Read the ticket bodies yourself — you need them for the graph checks in step 3, and you are allowed to be warm; the probes are the cold readers. Note the start commit the implementers will branch from.
+Resolve the spec from the argument or conversation and enumerate its tickets: ref, state, blocking edges. Read their bodies for the graph review. Record the implementation start commit as a SHA; inspect repository files and cited documents at that revision. Keep completed-prerequisite assumptions distinct from what exists at this baseline.
 
 ### 2. Dispatch cold probes
 
-One probe per open ticket, in parallel (`agent_run` with `model_id="explore"`, `detach: true`, then one `wait` on the batch — or this environment's equivalent read-only subagent).
+Use read-only subagents with conversation inheritance disabled. Choose available tools and scheduling to suit the environment; each ticket needs a fresh reader, including when probes run sequentially. If isolated probes are unavailable, report the cold-read check as unverified.
 
-The brief contains exactly four things — a bare pointer, so the probe stays cold:
+Give each probe:
 
 1. The ticket ref (or the ticket's verbatim body, when the probe has no tracker access).
 2. The repo root and start commit.
-3. The budget: 50k tokens (or the user's figure).
+3. The context budget.
 4. This checklist and report format:
 
 ```
-You are rehearsing a fresh implementation session for one ticket. You know
-nothing about the wider feature — grade the ticket on what it alone gives you.
+You are rehearsing a fresh implementation session for one ticket. Grade it
+on the context it supplies and what you can establish from the codebase.
 
-1. FOOTPRINT — Find every file you would need loaded to implement this.
-   Estimate their total tokens. Over budget → oversized.
-2. COLD START — List what the ticket assumes you know but doesn't say
-   (vocabulary, decisions, file locations). Anything you had to guess.
-3. CRITERIA — For each acceptance criterion, name the observation that would
-   show it false, and whether it already passes at the start commit.
-4. DEMO — State what can be demoed when this ticket is done. Behaviour, not
-   a layer.
+Inspect files and cited repository documents at the supplied start SHA.
 
-Return only:
-{ verdict: fits|oversized|unclear, est_tokens, files: [...],
-  missing_for_cold_start: [...], criteria: [{text, falsifiable, passes_at_base}],
-  demo_path: "..." }
-plus at most two sentences of commentary.
+1. FOOTPRINT: Estimate source context needed together, using relevant file
+   sections where sufficient. Explain the estimate, uncertainty, and work
+   complexity. If too large, identify a viable split boundary.
+2. COLD START: Identify decisions or information the ticket leaves unresolved
+   after repository inspection. Record missing references and assumptions
+   about declared prerequisites separately from observed baseline facts.
+3. CRITERIA: For each criterion, give a falsifying observation and its status
+   at the start SHA: passes, fails, or unknown. Cite file locations or check
+   results; distinguish an intentional regression guard from a criterion
+   that passes without checking the intended change.
+4. CONTRIBUTION: State the behaviour that can be demonstrated after declared
+   prerequisites are satisfied. For prefactoring, name the structural
+   outcome and how preserved behaviour can be verified.
+
+Return a concise report containing:
+- Assessment and unresolved concerns.
+- Estimated tokens, estimation method, file sections, complexity, and any
+  proposed split boundary.
+- Missing cold-start context and prerequisite assumptions.
+- Each criterion, its falsifying observation, baseline status, evidence,
+  and any reason verification was unavailable.
+- The demo or verification path for this ticket's contribution.
 ```
 
-Probes report `oversized`/`unclear`; you own the final verdict vocabulary — `merge` and `horizontal` are yours to assign, since only you see the whole graph.
+You assign final verdicts from probe evidence and the whole graph.
 
-### 3. Graph checks (while probes run)
+### 3. Review the graph
 
-From the ticket bodies, warm and whole-graph:
+Check the ticket bodies and incorporate probe findings as they arrive:
 
 - Every blocking edge resolves to a ticket in the spec; no cycles.
-- No criterion is satisfied by work another ticket owns (the `horizontal` tell).
+- Each ticket adds an independently verifiable contribution once declared prerequisites are satisfied. Depending on earlier work alone does not make a ticket `horizontal`.
 - Adjacent tickets whose demo paths only make sense together → `merge` candidates.
-- Prefactoring tickets sit at the front of the order.
+- Prefactoring precedes the work it prepares and has a verifiable structural outcome with preserved behaviour.
 
-### 4. Spot-check
+### 4. Resolve consequential uncertainty
 
-Probes report what they intended to find, not what they saw. Before a claim decides a verdict, verify it yourself: re-count one `oversized` footprint with your own file reads; run one `passes_at_base` claim against the start commit. One spot-check per verdict class that appears.
+Verify uncertain or conflicting claims that could change a verdict, using evidence at the recorded SHA. For example, inspect the selected sections behind a borderline footprint or check a disputed criterion at baseline. Accept supported observations without a fixed recheck quota. Carry unresolved uncertainty into `unclear` with the evidence needed to resolve it.
 
 ### 5. Report
 
-One table: ticket ref, verdict(s), evidence, one-line remedy (`split along <seam>`, `merge into #N`, `rewrite criterion 2`). Below it, the graph findings. Done when **every open ticket has a verdict backed by its required evidence**. End with the single most consequential finding — the one to fix before dispatching anything.
+One table: ticket ref, verdict(s), evidence, one-line remedy (`split along <seam>`, `merge into #N`, `rewrite criterion 2`). Below it, give the baseline SHA, graph findings, and verification limits. Done when **every open ticket has a supported verdict or an explicit `unclear` finding naming what is needed**. End with the most consequential finding, or state that no dispatch-blocking finding remains.
