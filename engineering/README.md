@@ -44,6 +44,14 @@ Both user-invoked only — they fire when you type them, never autonomously. Eac
 
 How they compose: `onboarding` creates walkthroughs born with a `Verified: <date> against <commit>` stamp; `doc-sync` uses that stamp to scope re-verification to the diff since it. They share one verification table — it lives in `onboarding`'s SKILL.md, and `doc-sync` points at it. A repo's own contract (e.g. r3pulse's `docs/agents/onboarding.md`) overrides both skills' defaults.
 
+## Discovery
+
+User-invoked only.
+
+| Skill | What it does | Canonical invocation |
+|---|---|---|
+| `qol-hunt` | Surveys the whole app via explore subagents and proposes N quality-of-life features, each disqualified unless its friction is cited and verified first-hand. | `/qol-hunt` (optionally: count, scope, "write a report") |
+
 ## Targeted
 
 | Skill | What it does | Canonical invocation |
