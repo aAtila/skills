@@ -3,7 +3,7 @@ id: 938BD461-A83C-4983-AD85-EFC89197882B
 name: "Ship Spec"
 icon: "checklist"
 tooltip: "Walk a spec's ticket graph and ship it as one PR"
-description: "Ship a spec's ticket graph as one PR: walk the dependency frontier on GitHub or GitLab, dispatch each ticket through Build It, cold-verify and close tickets as they land, then cold-review the branch, open the PR, and post a run retrospective."
+description: "Coordinate a spec's dependent tickets through Build It, verify completion, and open one PR on GitHub or GitLab."
 ---
 
 # Ship Spec
@@ -15,14 +15,14 @@ You are the orchestrator of a spec: a tracker issue whose tickets form a **task 
 Three words carry this workflow:
 
 - **The frontier** — the open tickets whose blockers are all closed. Always computed fresh from the tracker, never from memory: the tracker is the source of truth for done/not-done, which is what makes a killed run resumable.
-- **The notes issue** — a tracker issue this run owns: research notes, the ticket→seam table, and the run ledger (per-ticket status, commit SHAs, file manifest). You write it; children and future resumed runs read it.
-- **A pause** — stop, `ask_user`, idle until answered; resolve nothing marked _pause_ on your own. Pause sites are marked inline where they arise; the _Pause triggers_ list at the end holds the ones with no phase home. The user would rather be asked than surprised.
+- **The notes issue** — a tracker issue this run owns: run state, research notes, the ticket→seam table, and the run ledger. You write it; children and future resumed runs read it.
+- **A pause** — ask the user for a decision and wait before the dependent action. Continue independent work when the checkout is safe. Pause sites below cover decisions that evidence and existing authorization cannot settle.
 
-Communicate with children through **context pointers** — ticket refs, the notes issue, commit SHAs — plus the operational envelope a brief template explicitly asks for: branch, confirmed seam, scope and ownership rules. Never restate what a pointer already reaches — no acceptance criteria, research notes, or review findings copied into a brief; the template's inline seam is the one sanctioned duplication.
+Communicate with children through **context pointers**: ticket refs, the notes issue, and commit SHAs. Include the checkout, branch, confirmed seam, and ownership rules requested by each brief template. Children read acceptance criteria, research, and findings through the pointers.
 
 ---
 
-## Phase 0: Name the Session (REQUIRED — first action)
+## Phase 0: Name the session
 
 ```json
 {"tool":"set_status","args":{"session_name":"SPEC #<spec>: <short title>"}}
@@ -37,16 +37,16 @@ Communicate with children through **context pointers** — ticket refs, the note
 All tracker commands come from the _Tracker adapter_ section at the end of this document. Resolve the tracker first (`git remote get-url origin`), then:
 
 1. **Fetch the spec and its tickets.** Read the spec body, enumerate its tickets, and for each ticket read: state, labels, acceptance criteria, blocking edges. Tickets labeled `HITL` or `ready-for-human` are **human tickets** — they gate the graph like any other but are worked by the user, never dispatched.
-2. **Validate the graph.** Every blocking edge resolves to a ticket in the spec; no cycles. A malformed graph is a pause.
-3. **Resume check.** Look for a notes issue linked from the spec (titled `Notes: <spec title>`). Finding one means a previous run was interrupted: read its ledger and _Decisions_ section back (decisions bind this run as if the user just said them), verify integrity — every closed ticket's recorded commit SHA is reachable on the remote spec branch — then adopt the branch and skip to Phase 3. An integrity mismatch (ticket closed, commit missing) is a pause: tracker and branch disagree, the user decides.
-4. **Baseline.** `git op=status`. A dirty working tree is a pause. The clean baseline is what the abort path diffs against. Record which quality gates are runnable in this environment (full suite, typecheck, lint; note suites needing unavailable services). Before recording, read the **caveats ledger** — the repo's standing tracker issue labeled `caveats` (find it with e.g. `gh issue list --label caveats`; one per repo, shared by all runs) — so the gates list starts from what past runs already diagnosed. Treat entries as **checkable claims, not standing facts**: attributing a later failure to an entry requires an **exact** match against its recorded signature (same count, same suites); a partial match is a diff to investigate. That recorded list — not a child's judgment or yours — is what **green** means for every sanity pass and dispatch: unavailable-by-baseline suites don't block, newly-failing ones do.
-5. **Spec branch.** The run lives on `spec/<number>-<slug>`, branched off the **remote** default branch — record that base SHA now; it goes into the notes issue when Phase 2 creates it. Already on a branch carrying the spec number → adopt it only after checking ancestry: every commit above the merge-base with the remote default branch must belong to this spec or a verified resume ledger; foreign commits would ship in the PR — that's a pause. Record the adopted name as the run's `<spec-branch>` and use it wherever later phases say `spec/<number>-<slug>`. Otherwise create and check it out.
+2. **Validate the graph.** Every blocking edge resolves to a ticket in the spec; no cycles. Investigate malformed references; pause if repair requires choosing dependencies or scope for the user.
+3. **Resume check.** Read any linked notes issue titled `Notes: <spec title>`. Its _Run_ section distinguishes `active`, `interrupted`, and `complete` runs. A complete run reports its existing PR and any pending retrospective; it does not restart implementation. For an unfinished run, recover the branch, baseline, gates, Ledger, and user decisions with their recorded sources. Current user instructions take precedence. Verify recorded code commits for closed tickets are reachable on the remote spec branch; human tickets use recorded tracker completion evidence instead. Investigate discrepancies before pausing for an unresolved tracker/branch mismatch. Older notes without a Run section require reconstruction from the ledger, tracker, and branch evidence; pause if a required baseline or ownership fact cannot be recovered. Every resumed implementation completes steps 4–5 before dispatch. Recover any active ticket and its child before selecting a new ticket.
+4. **Checkout and branch.** Inspect `git op=status` and refresh the remote default and spec refs. Preserve unrelated dirty work by using a clean isolated checkout when needed; keep any existing work for this spec in its current checkout while establishing ownership. Pause only if continuing would overwrite work or ownership remains unclear. The run uses one checkout and one writer at a time. Create `spec/<number>-<slug>` from the remote default branch, or adopt the recorded spec branch after checking that every commit above its merge-base with the remote default belongs to this spec or its verified ledger. Investigate unexplained commits before adopting. Record the checkout path, branch name, base SHA, baseline HEAD, and any pre-existing changes excluded from this run. Use the recorded branch and checkout in every child brief.
+5. **Baseline and gates.** Preserve the original run baseline on resume. Check the current environment and record required gate commands, when they apply (per ticket or final integration), and unavailable services with evidence. Read the repo's tracker issue labeled `caveats` if one exists. Entries are checkable claims: an exemption requires a matching failure signature, including suites and count; investigate differences. **Green** means all applicable gates pass except evidenced baseline exceptions. Record results with commit SHA, command, environment, and outcome. Reuse results only when the tested content and environment still match, including any uncommitted changes; after changes, rerun affected checks and any repo-required gates. Run broader checks for integration risk, new failures, or explicit repo requirements. Newly failing gates require diagnosis, not a new exemption.
 
-**Done when** you hold the full ticket table (id, title, ACs, blockers, human/agent), the graph validates, and HEAD is on the spec branch.
+**Done when** the graph validates, the ticket table is complete, and the spec checkout, baseline, and gates are established. On resume, persist refreshed run metadata, repair missing shared context through Phase 2 as needed, then continue from the recorded phase.
 
 ---
 
-## Phase 2: Shared Context and Seams
+## Phase 2: Shared context and seams
 
 1. **Dispatch one explore agent** to research the codebase for the whole spec:
 
@@ -55,32 +55,41 @@ All tracker commands come from the _Tracker adapter_ section at the end of this 
 	"op":"start",
 	"model_id":"explore",
 	"session_name":"SPEC #<spec> · Explore",
-	"message":"Read spec <ref> and its tickets via `gh`/`glab` first. Map the codebase areas they touch: relevant modules, existing patterns to follow, gotchas. For each code ticket, propose the seam — the public boundary its tests should be written against. Return markdown: research notes, then a ticket→seam table."
+	"message":"Read spec <ref> and its tickets via `gh`/`glab` first. In checkout <checkout> on branch <spec-branch>, map the codebase areas they touch: relevant modules, existing patterns to follow, gotchas. For each code ticket, propose the seam — the public boundary its tests should be written against. Return markdown: research notes, then a ticket→seam table."
 }}
 ```
 
 2. **Decide TDD per ticket.** A ticket delivering testable behaviour (logic, API, data flow — most tracer bullets by construction) is a **TDD ticket** and needs a seam. Config, tooling, docs, and pure visual polish tickets are exempt.
-3. **Confirm the seams.** You are the seam authority: review the explore agent's proposals against the tickets, fix what's wrong. A seam you can't settle is a pause.
-4. **Create the notes issue** on the tracker: title `Notes: <spec title>`, linked from the spec, body with four sections — _Research notes_ (the explore output), _Seams_ (the confirmed ticket→seam table), _Ledger_ (one row per ticket: status · commit SHAs · files changed, all empty for now), _Decisions_ (empty for now). From here on the notes issue is the run's persistent memory — update the Ledger after every ticket, and append every pause resolution and mid-run user steer to _Decisions_ as it lands, so a resumed run can reconstruct everything — work and corrections — from the tracker alone.
-5. **Auto-approve the seams and proceed.** You are the seam authority — once you've confirmed the seams in step 3, they're settled. Record the confirmed ticket→seam table (and which tickets are TDD/exempt/human) in the notes issue and move straight to Phase 3; do **not** pause for user confirmation of the seam table. A seam you genuinely can't settle is still a pause (step 3), but a settled table dispatches on its own.
+3. **Confirm the seams.** Review the proposals against the tickets and code, fix what's wrong, and proceed once settled. Resolve later child objections the same way and update the table before steering the child. Pause only when choosing a seam requires an unresolved product or architectural decision.
+4. **Create or update the notes issue** on the tracker, titled `Notes: <spec title>` and linked from the spec, with these sections:
 
-**Done when** the notes issue exists with all four sections in place.
+   - _Run_: state (`active`, `interrupted`, `complete`), current phase and active ticket/session, checkout, branch, base SHA, original baseline and exclusions, gate inventory and result evidence, PR URL, retrospective status/link or saved path.
+   - _Research notes_: the explore output.
+   - _Seams_: confirmed ticket→seam table with TDD/exempt/human classification.
+   - _Ledger_: per-ticket status, correction count, commit SHAs, files changed, and verification evidence. Preserve existing entries on resume.
+   - _Decisions_: user decisions with source references, including pause resolutions and mid-run steering.
+
+Update phase and ticket state as work advances. Record a failure before selecting another ticket, and record decisions before taking the action they authorize.
+
+**Done when** the notes issue contains the run metadata, shared context, and settled seams needed to dispatch the next ticket.
 
 ---
 
-## Phase 3: Walk the Frontier
+## Phase 3: Walk the frontier
 
-Strictly sequential: one ticket in flight at a time. Parallelism arrives with worktrees in a later version of this workflow — on a shared branch, concurrent children racing commits is the failure mode, so wide frontiers queue.
+One ticket in flight at a time. Children share the run checkout, so concurrent writers would race commits.
 
 Repeat until every ticket is closed:
 
 ### 1. Compute the frontier
 
-Query the tracker: open tickets whose blockers are all closed. Pick the next agent-workable ticket (prefer unblocking-heavy tickets — the ones the most others wait on).
+Query the tracker: open tickets whose blockers are all closed. Consult the notes Ledger and exclude failed tickets and their downstream subtrees from dispatch. A failed ticket stays excluded across resumes until a user decision authorizes retry or resolves its scope. Pick the next agent-workable ticket, preferring those that unblock the most others.
 
 **Human tickets**: the moment one enters the frontier, tell the user — they can work it while you keep dispatching agent tickets. When the frontier holds *only* human tickets (or is empty while human tickets remain open), pause with `ask_user`; when the user reports done, confirm the ticket is closed on the tracker before recomputing. If the frontier is empty and open tickets remain, the graph is stuck — that's a pause with the blocked subtree named.
 
 ### 2. Dispatch a Build It child
+
+Record the active ticket and its starting HEAD in the Ledger before dispatch; record the returned session id so a resumed run can recover the child.
 
 ```json
 {"tool":"agent_run","args":{
@@ -95,20 +104,22 @@ The brief is pointers plus scope:
 
 > Your task is ticket <ref> — read it first (`gh issue view <n>` / `glab issue view <n>`), including its acceptance criteria. Implement exactly that ticket; other tickets in the spec are handled separately.
 > Fetch the notes issue <ref> the same way: research notes for context, the Ledger section for what previous tickets already landed.
-> _(TDD tickets only:)_ Call the Skill tool with `tdd` and follow it before you start. Build at this seam: `<seam>`. It's already confirmed — treat it as settled. If it looks wrong, stop and report back rather than choosing another one.
-> You are on branch `spec/<number>-<slug>` — commit your work there as Build It directs. Pushing and PRs belong to the orchestrator.
+> _(TDD tickets only:)_ Call the Skill tool with `tdd`. Follow it before you start. Build at this seam: `<seam>`. It's already confirmed — treat it as settled. If it looks wrong, stop and report back rather than choosing another one.
+> Work in checkout `<checkout>` on branch `<spec-branch>`. Commit your work there as Build It directs. Pushing and PRs belong to the orchestrator.
 > If you stop to report, leave your working tree exactly as it stands — the orchestrator owns any decision about uncommitted work.
-> Done when the ticket's acceptance criteria are implemented and committed. Report your commit SHAs and files changed.
+> Read the Run section for applicable gates. Done when the ticket's acceptance criteria are implemented, applicable gates pass, and the work is committed. Report commit SHAs, files changed, and gate evidence.
 
 Use `engineer` instead of `pair` when the ticket is small and its path is obvious from the ACs alone.
 
 ### 3. Sanity pass
 
-When the child returns: new commits exist on the branch, the Phase-1 recorded gates are green, and the reported files-changed manifest matches `git op=diff`. Record SHAs and manifest in the Ledger. Gaps → steer the same child (it holds the context); after **two** failed corrections, the ticket is **failed** — comment the state of things on the ticket, and continue with frontier tickets outside its downstream subtree. Dispatch onto a green tree only: a red tree halts the loop (pause).
+When the child returns, verify its commits exist on the branch, applicable gates are green under Phase 1, and its file manifest matches the diff from the ticket's starting HEAD to the returned HEAD. Before another ticket starts, finish and commit the active ticket's work. If run-owned uncommitted changes remain after its correction budget is exhausted, preserve them and pause for a disposition; identifying their owner alone does not make the checkout ready. Record SHAs, files, and gate evidence in the Ledger.
+
+For a sanity failure or unmet acceptance criterion from step 5, steer the same implementing child. Allow two correction attempts per ticket across both kinds of failure, recording each attempt before dispatch so resumes preserve the count. Every corrected result returns through steps 3–5, including pushing before verification. After the second unsuccessful correction, mark the ticket failed in the Ledger and comment its state on the ticket. Continue outside its downstream subtree only when no run-owned uncommitted changes remain and the applicable gates are green. If repair cannot restore that state within the correction budget, preserve the work and pause for a decision. A first test failure starts diagnosis; it does not itself require approval.
 
 Two child-session mechanics:
 
-- **A child that pauses with its own question**: answer with `agent_run op=respond` choosing one of its advertised options. If none matches the user's decision, pick the least destructive option, then immediately steer with the full instruction. A question whose default discards work always gets an explicit answer, never a skip or timeout.
+- **A child that pauses with its own question**: answer with `agent_run op=respond` when an advertised option fits the evidence and existing authorization. If none fits, keep the child paused and steer with the needed instruction; use `ask_user` only for a decision the orchestrator cannot settle. Never select an inaccurate option just to advance the session.
 - **A steer/wait handle can expire while its session is still alive.** On `Expired`, re-acquire via `agent_manage op=list_sessions` and steer the same session id — a live session keeps its context; re-dispatching a replacement loses it.
 
 ### 4. Push
@@ -122,23 +133,23 @@ Push the spec branch. A closed ticket must always point at commits that exist on
 	"op":"start",
 	"model_id":"engineer",
 	"session_name":"SPEC #<spec> · Triage #<ticket>",
-	"message":"Load the `triage` skill. Ticket <ref> — implementation is committed and pushed on branch `spec/<number>-<slug>`. Verify all acceptance criteria are met. Close the ticket if everything checks out; report any unmet AC instead of closing."
+	"message":"Call the Skill tool with `triage`. Read ticket <ref> and notes issue <ref>. Implementation at <head SHA> is committed and pushed on branch <spec-branch> in checkout <checkout>. Verify all acceptance criteria are met at that commit. Close the ticket if everything checks out; report any unmet AC instead of closing."
 }}
 ```
 
-The verifier closes on pass — that is what advances the frontier (and on GitHub, native blocked-by unblocks dependents automatically). Unmet ACs go back to the implementing child as a steer, then re-verify. You grade nothing yourself: the sanity pass checks mechanics, the verifier judges the work.
+The verifier closes on pass, advancing the frontier. Unmet ACs enter the correction loop in step 3. The sanity pass checks mechanics; the independent verifier judges acceptance.
 
 ### 6. Bookkeeping
 
 Update the notes-issue Ledger row (status, SHAs, files) and comment the commit SHAs on the closed ticket. Keep all child sessions — implementers and verifiers — until the end of Phase 4: the retrospective reads them and a later steer may need them. Then recompute the frontier.
 
-**Done when** every ticket in the spec is closed and pushed, or the remaining open tickets are failed/blocked and the user has been paused for a decision.
+**Done when** every ticket in the current spec is closed, with code commits pushed and human completion confirmed on the tracker. Failed or blocked work is an interrupted run requiring a user decision, not a completed spec. If the user changes scope, update the spec and graph before close-out; a partial PR must not claim to close an unmet spec.
 
 ---
 
 ## Phase 4: Close-out
 
-1. **Cold review** of the whole branch — cross-ticket drift is invisible to the per-ticket warm reviews inside Build It, so a fresh reader takes the whole diff:
+1. **Cold review** of the whole branch catches cross-ticket drift. Run the applicable final integration gates, refresh the remote default ref, and record the review base (merge-base with that ref) and head SHAs. Give a fresh reader the exact range and the spec:
 
 ```json
 {"tool":"agent_run","args":{
@@ -146,16 +157,16 @@ Update the notes-issue Ledger row (status, SHAs, files) and comment the commit S
 	"model_id":"design",
 	"workflow_name":"Review",
 	"session_name":"SPEC #<spec> · Review",
-	"message":"Review the changes on branch spec/<number>-<slug> against its merge-base with the default branch.",
+	"message":"Read spec <ref> and its tickets. Independently review the diff from <base SHA> to <head SHA> on branch <spec-branch> in checkout <checkout> for correctness and compliance with the spec.",
 	"detach":true
 }}
 ```
 
-Keep the brief to that sentence — naming decisions or constraints warms up the reviewer and defeats the cold read. Wait with `agent_run op=wait`.
+Supply authoritative requirements as pointers and let the reviewer form its own conclusions. Wait with `agent_run op=wait`.
 
-2. **Warm triage in this session** — call the Skill tool with `apply-review` (orchestrated mode). Interrogate the reviewer by steering its session — one finding, one specific question per steer. Expect one false-positive class: the cold reviewer cannot see intent, so a finding that contradicts an explicit spec decision is a challenge to answer with the spec's own text, not a defect to fix — have the reviewer amend its saved report when it withdraws one. Apply accepted fixes (narrow fresh agents for behavioural or multi-file fixes; directly for mechanical ones), verify against the affected modules' full test suites, and commit them as their own commit (call the Skill tool with `commit-me`). Record review-fix commits in a **Review fixes** Ledger row (SHAs, files) as they land; before opening the PR, push the branch, then reconcile the Ledger against `origin/<default>..HEAD` — every commit in the PR range must be accounted for, and an unexplained one is a pause. An architectural finding that invalidates closed tickets is a pause.
+2. **Triage and fix.** Call the Skill tool with `apply-review`. Select orchestrated mode. Resolve unclear findings by steering the reviewer; assess conflicts with spec decisions using that skill's evidence rule. Apply accepted fixes, using narrow agents for behavioural or multi-file changes and direct edits for mechanical ones. Verify under the Phase-1 gate policy. Call the Skill tool with `commit-me`. Record fixes in a **Review fixes** Ledger row with SHAs, files, and validation evidence. Have the reviewer check changed behaviour and affected findings at the new head; reuse unaffected findings from the original review. Pause if a fix requires an unresolved architecture or scope decision that invalidates closed tickets. Before opening the PR, push and reconcile every commit in the PR range against the Ledger. Investigate unexplained commits, and pause if ownership cannot be established. Record the final reviewed head and confirm it matches the pushed PR head.
 
-3. **Draft and open the PR** — call the Skill tool with `draft-pr` (don't restate it), invoking its draft-and-open branch: this workflow's explicit instruction is to open. The branch name gives it the spec number for the `Closes` line (tickets are already closed — only the spec rides the PR). The user reviews the open PR on their own time; the run doesn't block here.
+3. **Draft and open the PR.** Call the Skill tool with `draft-pr`. Invoke its draft-and-open branch; this workflow explicitly instructs opening the PR. Reuse an existing PR for this branch on resume. Tickets are already closed; only the completed spec uses the PR's `Closes` line. The user reviews the open PR on their own time; the run does not block here.
 
 4. **Rollup.** Comment the rollup on the spec issue: per-ticket outcomes, failed/deferred work, review verdict table with held findings and one-line reasons. Then settle the caveats ledger: append any environment quirk this run diagnosed that it doesn't list (create the issue if the repo lacks one: `gh issue create --label caveats --title "Known caveats"`, pinned if permissions allow), each entry stating symptom, repro command, expected signature, and date — and prune entries whose quirk didn't reproduce when its gate ran this run.
 
@@ -163,11 +174,11 @@ Keep the brief to that sentence — naming decisions or constraints warms up the
 
 > Read the Ship Spec workflow at `<workflow path>` and the run transcript at `<export path>`. Audit this run against the workflow's own contract: pauses honored, frontier computed from the tracker, briefs within the pointer-plus-envelope rule (see the intro), ledger complete. Report traps (where the wording steered behaviour wrong or nearly did, with turn references), clean areas, and proposed workflow edits.
 
-Post the findings as a **retro issue in the skills repo** — the repo this workflow file lives in, not the project repo (resolve its `owner/repo` from the skills clone's remote and pass it explicitly, e.g. `gh issue create --repo <owner>/<skills-repo>`). One issue per run: title `Retro: Ship Spec — <project repo> — <date>`, labels `retro` and `ship-spec`, body opening with `Workflow: ship-spec | Repo: <owner>/<project-repo> | Spec: #<spec> | Session: <id> | Date: <date>` followed by the findings. Leave it **open** — open means unprocessed; the **Workflow Therapist** workflow closes it when its findings are consumed. If the skills repo is unreachable from this run (auth, host mismatch), that's a pause: hand the retro text to the user rather than dropping it or posting it into the project repo. Then close the notes issue and delete the transcript export — the notes issue stays about this run's work, and the sessions themselves stay disposable.
+Post the findings as a **retro issue in the skills repo**, resolved from this workflow's source clone remote and passed explicitly to the tracker command. One issue per run: title `Retro: Ship Spec — <project repo> — <date>`, labels `retro` and `ship-spec`, body opening with `Workflow: ship-spec | Repo: <owner>/<project-repo> | Spec: #<spec> | Session: <id> | Date: <date>` followed by the findings. Reuse an existing issue for this run. Leave it open for **Workflow Therapist** to process. If publication is unavailable, save the exact retro text to a durable local file outside the project repo and give the user its path and the failure reason. Record publication as pending; delivery need not wait for skills-repo access. Comment the retro link or pending status and saved path on the notes issue, set Run state to `complete`, record the PR URL, and close the notes issue. Delete temporary transcript exports only once the findings are preserved.
 
-6. **Offer cleanup — never run it unprompted.** Final `ask_user`: "N child sessions from this run are still around — clean them up now, or leave them for a post-PR-review steer?" Default is leave them; the user can trigger cleanup later in one sentence. Also delete stale `prompt-exports/` files from this run.
+6. **Retain child sessions** for later PR feedback. Report the retained count in the final handoff; cleanup runs only when requested. Delete only temporary prompt exports owned by this run, preserving any pending retro artifact.
 
-**Done when** the PR is open, the notes issue is closed with the retro comment, and the rollup is posted.
+**Done when** the completed spec's PR is open at the final reviewed and validated head, the rollup is posted, and the notes issue is closed with the PR and retrospective outcome recorded. Pending retro publication is reported separately with its saved artifact; it does not turn a delivered spec back into an implementation task.
 
 ---
 
@@ -176,9 +187,9 @@ Post the findings as a **retro issue in the skills repo** — the repo this work
 Abort is a first-class exit:
 
 1. Cancel running children (`agent_run op=cancel`).
-2. Diff against the Phase 1 baseline; the Ledger manifests scope exactly which files are this run's.
-3. Offer a patch-backed revert of exactly those files; revert only on confirmation. Reverting work whose ticket already closed means reopening that ticket in the same breath — the tracker must not claim work the branch takes back.
-4. Post the interruption state as a comment on the notes issue (leave it open) — the resume check in Phase 1 picks the run back up from there.
+2. Compare the checkout against the original Phase-1 baseline, exclusions, and Ledger. Include the active child's uncommitted changes when establishing which edits belong to this run.
+3. Offer a patch-backed revert of this run's changes; revert only on confirmation and preserve pre-existing edits even when they share a file. Reverting work whose ticket already closed means reopening that ticket in the same breath.
+4. Set Run state to `interrupted` and record the current phase, active ticket, correction count, and uncommitted work on the notes issue; leave it open. If stopped before notes creation, report that state directly to the user.
 
 ---
 
@@ -186,8 +197,7 @@ Abort is a first-class exit:
 
 These have no phase home but pause all the same:
 
-- Ambiguous or contradictory acceptance criteria on a ticket
-- A child reporting its assigned seam looks wrong
+- Acceptance criteria or seam choices that remain ambiguous after checking the spec and code, and require a user decision
 - A failed ticket with no agent-workable frontier remaining
 - Anything destructive or irreversible: force-push, data loss, deleting remote objects
 
