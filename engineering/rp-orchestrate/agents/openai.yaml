@@ -1,0 +1,4 @@
+interface:
+  display_name: "RepoPrompt Orchestrate"
+  short_description: "Coordinate RepoPrompt sessions with personal models"
+  default_prompt: "Use $rp-orchestrate to coordinate this task through RepoPrompt CE with my preferred scouts and workers."

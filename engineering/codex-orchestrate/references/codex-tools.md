@@ -4,7 +4,7 @@ Use this reference when dispatching through Codex's `collaboration` tools. These
 
 ## Spawn and context
 
-Call `collaboration.spawn_agent` with a descriptive `task_name` and a self-contained `message`. Apply the role's model and effort from SKILL.md using this context policy:
+Call `collaboration.spawn_agent` with a descriptive `task_name` and a self-contained `message`. Apply the role's model and effort from the [shared policy](../../orchestrate/SKILL.md#choose-the-role) using this context policy:
 
 | Child settings relative to parent | Fork behavior |
 | --- | --- |

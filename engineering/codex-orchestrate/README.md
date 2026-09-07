@@ -6,7 +6,7 @@ Use this skill when a substantial task has independent parts that can progress i
 $codex-orchestrate <task>
 ```
 
-Your model preferences are built in, so you do not need to repeat them. See [Choose the role](SKILL.md#choose-the-role) for the model defaults and assignment criteria. The coordinator keeps its current model and reasoning effort.
+Your model preferences are built in, so you do not need to repeat them. See [Choose the role](../orchestrate/SKILL.md#choose-the-role) for the model defaults and assignment criteria. The coordinator keeps its current model and reasoning effort. Keep the companion `orchestrate` skill installed; it supplies the coordination policy shared with `rp-orchestrate`.
 
 ## When to use it
 

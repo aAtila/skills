@@ -7,6 +7,9 @@ The day-to-day coding companions. One line each; the SKILL.md is the source of t
 | Skill | What it does | Canonical invocation |
 |---|---|---|
 | [codex-orchestrate](codex-orchestrate/README.md) | Coordinates Codex subagents with Sol low scouts and Luna max for bounded mechanical work. | "$codex-orchestrate <task>" |
+| [rp-orchestrate](rp-orchestrate/README.md) | Coordinates RepoPrompt CE child sessions with the same personal model preferences. | "Use rp-orchestrate to <task>" |
+
+Both adapters call the shared [orchestrate](orchestrate/SKILL.md) policy for role selection, ownership, and verification.
 
 ## Commit → PR flow
 
