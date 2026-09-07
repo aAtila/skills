@@ -2,6 +2,12 @@
 
 The day-to-day coding companions. One line each; the SKILL.md is the source of truth for protocol and triggers.
 
+## Coordination
+
+| Skill | What it does | Canonical invocation |
+|---|---|---|
+| [codex-orchestrate](codex-orchestrate/README.md) | Coordinates Codex subagents with Sol low scouts and Luna max for bounded mechanical work. | "$codex-orchestrate <task>" |
+
 ## Commit → PR flow
 
 | Skill | What it does | Canonical invocation |

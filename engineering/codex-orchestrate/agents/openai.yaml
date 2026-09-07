@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Orchestrate"
+  short_description: "Coordinate Codex scouts and bounded workers"
+  default_prompt: "Use $codex-orchestrate to coordinate this task with Sol low scouts and Luna max for bounded mechanical work."
