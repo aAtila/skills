@@ -11,7 +11,9 @@ Use RepoPrompt CE's tools for delegated work. Keep the coordinator where the use
 
 Before the first dispatch, read [RepoPrompt tool mechanics](references/repoprompt-tools.md). Bind the requested repository and verify its checkout. Inspect the live tool and model catalogs; resolve the shared role preferences to exact advertised model targets. Do not assume role aliases match those preferences or change global role settings.
 
-Use a supplied plan directly. Otherwise, use RepoPrompt search, structure, and selection tools to establish context; call `context_builder` when discovery or planning warrants it. Pass focused briefs and any exported plan paths to children. Start independent workers in new sessions without forwarding the coordinator's transcript. Reuse the same Astra advisor session for related questions and new evidence.
+Reuse supplied plans without reopening settled decisions. Establish missing context with RepoPrompt search, structure, and selection tools. If material behavior, module ownership, or cross-module design remains unresolved after focused inspection, call `context_builder` before the affected implementation. Scope planning to the gap rather than regenerating the plan; resolve shared gaps once at the coordinator and export the result for relevant workers. Bounded assignments with these decisions settled can proceed directly.
+
+Pass focused briefs and any exported plan paths to children. Tell workers to return newly discovered material planning gaps to the coordinator before making affected edits. Start independent workers in new sessions without forwarding the coordinator's transcript. Reuse the same Astra advisor session for related questions and new evidence.
 
 Keep all children as leaves. Route useful discoveries through the coordinator using the supported follow-up controls; child-to-child messaging and recursive spawning are not part of this adapter's contract.
 
