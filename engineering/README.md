@@ -28,6 +28,7 @@ Both adapters call the shared [orchestrate](orchestrate/SKILL.md) policy for rol
 | `aa-second-opinion` | Sends the diff to the Oracle for external review, adds a contrasting take. Read-only. | "gut check this" |
 | `gpt-pro-review` | Sends a PR to ChatGPT Pro via Surf Oracle; ChatGPT posts the review comment on the PR and the skill confirms it landed. Read-only on code. | "gpt pro review this PR" |
 | `aa-simplify` | Critical pass biased toward removal — YAGNI, premature abstraction, dead branches. | "did I overdo it?" |
+| `cleanup` | Contract-first cleanup of a scope: cuts complexity, keeps contracts and regression coverage; can implement. User-invoked only. | `/cleanup <scope> [implement]` |
 | `apply-review` | Triages an incoming review's findings: applies what holds up, defends the rest with facts. | "apply this review" |
 | `test-review` | Audits existing tests for false greens and coverage gaps. Read-only; hands gaps to tdd. | "are these tests any good?" |
 | `qa-plan` | Post-build acceptance checklist derived from intent, not the diff. | "how do I QA what we built?" |

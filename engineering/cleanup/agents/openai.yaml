@@ -1,0 +1,5 @@
+interface:
+  display_name: "Behaviour-preserving Cleanup"
+  short_description: "Contract-first cleanup that keeps behaviour and coverage"
+policy:
+  allow_implicit_invocation: false
