@@ -5,7 +5,7 @@ description: Draft a PR/MR title and description. Use for every PR message, whet
 
 # PR Message
 
-This skill stops at the clipboard by default, on purpose: the user wants to read the title and body before pasting them into a PR (GitHub) or merge request (GitLab) — via `gh`, `glab`, or the web UI. The one exception is an explicit instruction to open — the user (or an orchestrating workflow) saying "draft and open it"; then Step 5 runs the create command instead of stopping. Absent that instruction, stop at the clipboard — an inferred intent to open is not an instruction. ("PR" throughout means either; the job is identical.) Two siblings cover the adjacent jobs:
+This skill stops at the clipboard by default, on purpose: the user wants to read the title and body before pasting them into a PR (GitHub) or merge request (GitLab) — via `gh`, `glab`, or the web UI. The one exception is an explicit instruction to open — the user (or an orchestrating workflow) saying "draft and open it"; then Step 6 runs the create command instead of stopping. Absent that instruction, stop at the clipboard — an inferred intent to open is not an instruction. ("PR" throughout means either; the job is identical.) Two siblings cover the adjacent jobs:
 
 - **`commit-me`** — makes every commit: formats, writes the message, stages, commits.
 - **`aa-commit-clarity`** — advisory only. Use first when a branch contains genuinely separable concerns and you want to think about whether it should be one PR or several before drafting the body.
@@ -154,7 +154,11 @@ Pulls device-id handling out of feature code so the Varnish-prep work (client-fi
 
 Notice what's *not* there: no file paths, no per-commit bullets, no "this PR does X" phrasing. `## Why` is included only because the surrounding context (Varnish prep) isn't obvious from the diff alone.
 
-### Step 5: Hand off
+### Step 5: Polish the body
+
+If `unslop` is in your available skills, call the Skill tool with `unslop` on the drafted body; otherwise skip this step and hand off the draft as is. Keep template headings, code spans, identifiers, and the `Closes #<n>` line exactly as drafted; the title keeps the repo's format from Step 3. **Done when** `unslop` has run (or is unavailable) and every claim in the body still matches the commits.
+
+### Step 6: Hand off
 
 Write the body to a temp file first — this avoids shell-quoting corruption when the body contains code blocks, backticks, or `$`. Direct `printf "$BODY" | pbcopy` works for plain text but silently mangles realistic PR bodies.
 
