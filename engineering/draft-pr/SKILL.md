@@ -1,14 +1,13 @@
 ---
 name: draft-pr
-description: Drafts a PR/MR title and markdown body from a branch's commits. Stops at the clipboard by default — for the user to review and paste into `gh pr create`, `glab mr create`, or the web UI; opens the PR/MR itself only when the invoker explicitly says to. Never pushes. Use when the user wants PR copy — a title and/or description for a branch they're about to open — or asks to draft and open the PR in one go. Sibling of `commit-me`/`aa-commit-clarity`/`land-pr`.
-disable-model-invocation: true
+description: Draft a PR/MR title and description. Use for every PR message, whether the user asked ("what should the PR say?", "draft and open the PR") or you need one yourself.
 ---
 
 # PR Message
 
 This skill stops at the clipboard by default, on purpose: the user wants to read the title and body before pasting them into a PR (GitHub) or merge request (GitLab) — via `gh`, `glab`, or the web UI. The one exception is an explicit instruction to open — the user (or an orchestrating workflow) saying "draft and open it"; then Step 5 runs the create command instead of stopping. Absent that instruction, stop at the clipboard — an inferred intent to open is not an instruction. ("PR" throughout means either; the job is identical.) Two siblings cover the adjacent jobs:
 
-- **`commit-me`** — generates the message for a single commit and copies it to the clipboard.
+- **`commit-me`** — makes every commit: formats, writes the message, stages, commits.
 - **`aa-commit-clarity`** — advisory only. Use first when a branch contains genuinely separable concerns and you want to think about whether it should be one PR or several before drafting the body.
 
 The body of a PR is a different artifact than a commit message. A commit explains one change; a PR explains a branch — usually multiple commits — to a human reviewer who has not been living inside it. **The diff shows the *what*; the body supplies the *why*.** That principle drives every choice below — the job is reviewer comprehension, not change logging.
