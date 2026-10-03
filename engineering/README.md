@@ -19,7 +19,7 @@ Both adapters call the shared [orchestrate](orchestrate/SKILL.md) policy for rol
 | `commit-me` | Formats, stages, writes a conventional message, commits. | "commit this" |
 | `draft-pr` | Drafts PR title + body from the branch's commits; stops at the clipboard. | "what should the PR title and message be?" |
 | `deploy-check` | Deployment-readiness verdict (green/yellow/red) for a diff range; yellow yields a sequenced runbook, red vetoes the landing. | "how do I deploy this safely?" |
-| `land-pr` | Takes the reviewed branch from ready to merged: history cleanup, merge-strategy verdict, the merge. User-invoked only. | "land this PR" |
+| `land-pr` | Takes the reviewed branch from ready to merged: history cleanup, merge-strategy verdict, the merge. Required for every merge. | "land this PR" |
 
 ## Review & second passes
 

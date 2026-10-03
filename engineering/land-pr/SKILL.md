@@ -1,7 +1,6 @@
 ---
 name: land-pr
-description: Take a reviewed branch from ready to landed — merge-strategy verdict with rationale, history cleanup with per-commit verification, then merge and branch deletion. Also answers "rebase or merge?" as an advisory-only run.
-disable-model-invocation: true
+description: Merge a PR/MR — the required path for every merge. Use whenever a PR is about to be merged, whether you decided to merge or were told to ("merge it", "land this", "ship the PR"), and when asked "rebase or merge?". Gives a merge-strategy verdict, cleans history with per-commit verification, then merges and deletes the branch.
 ---
 
 # Land PR
@@ -12,7 +11,7 @@ Takes a reviewed branch from "ready" to "landed", with two gates and one early e
 2. **Rewrite** — on go-ahead, clean the history so every retained commit is a valid state, then update the remote branch.
 3. **Land** — on a second confirmation, merge and delete the feature branch.
 
-Runs only when Atila invokes it by name — the rewrite never starts from another skill's flow. Siblings cover the adjacent jobs: `commit-me` lands a single commit, `aa-commit-clarity` decides boundaries for an uncommitted diff, `draft-pr` describes the branch without reshaping it, `deploy-check` turns a flagged diff into a deployment verdict and runbook. This skill is the reshaping-and-landing step that runs after the PR has been reviewed.
+Every merge goes through this skill — whether Atila asked for it or another flow reached the merge. Never call `gh pr merge` / `glab mr merge` outside Step 4. Siblings cover the adjacent jobs: `commit-me` lands a single commit, `aa-commit-clarity` decides boundaries for an uncommitted diff, `draft-pr` describes the branch without reshaping it, `deploy-check` turns a flagged diff into a deployment verdict and runbook. This skill is the reshaping-and-landing step that runs after the PR has been reviewed.
 
 ## Judgment: the three jobs of history
 
