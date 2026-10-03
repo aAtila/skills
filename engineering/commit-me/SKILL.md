@@ -1,11 +1,9 @@
 ---
 name: commit-me
-description: Commit changes — the required path for every git commit. Use whenever a commit is about to be made, whether the user asked ("commit this", "save changes", "wrap up") or you decided to commit your own work. Formats code, writes a conventional commit message, stages the relevant files, and commits — or stops at the staged message when the user says not to commit.
+description: Commit changes: format, write a conventional message, stage, commit. Use for every git commit, whether the user asked ("commit this", "wrap up") or you decided to commit your own work.
 ---
 
 # Commit
-
-Every commit goes through this skill — whether the user asked for it or you are committing your own work. Run `git commit` only from Step 3.
 
 This skill commits by default. Generate the message, stage the right files, and land the commit — unless the user has said they don't want it committed this time, in which case stop after staging and show them the message to run themselves. Either way, always print the full commit message in your response. A sibling covers an adjacent job:
 
