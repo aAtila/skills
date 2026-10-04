@@ -1,100 +1,74 @@
 ---
 name: aa-simplify
-description: Use whenever the user wants a critical second-pass focused on cutting code — phrasings like "simplify this", "is this over-engineered?", "did I overdo it?", "what would you remove?", "feels bloated", "any cleanup opportunities?". Reviews recent changes with a bias toward removal — outputs findings for discussion, not direct edits.
+description: Cut-focused review of recent changes: what to delete, inline, or collapse. Use when the user asks to simplify or trim, or doubts a change ("over-engineered?", "did I overdo it?").
 ---
 
 # Simplify
 
-A critical second-pass on recent code changes, biased toward **removal**. The author just wrote this code and is biased toward keeping it; the reviewer's job is to read it cold and ask what actually survives scrutiny. Treat the iteration history as a _liability_, not credit — early decisions ossify and stop being questioned.
+A second pass on recent changes, biased toward **removal**. Read the change **cold**: history, passing tests, and plans are context, not justification.
 
-## Scope
+## 1. Scope
 
-If the user already named a comparison target ("simplify this branch", "the last 3 commits", a path, a PR), use it and skip confirmation. Otherwise resolve in order:
+Use the target the user named (a branch, commits, a path, a PR). Otherwise: uncommitted changes (`git diff` + `git diff --staged`); if none, the latest commit. If the branch is ahead of trunk and the uncommitted diff is trivial, offer branch-vs-trunk. Ask only if the target is genuinely ambiguous.
 
-- `git diff` + `git diff --staged` (uncommitted work) — the default
-- If both are empty: the most recent commit
-- If the branch is ahead of trunk and the uncommitted diff is trivial: offer branch-vs-main
+## 2. Examine
 
-If the diff is large or the right target is genuinely ambiguous, ask the user before reading the whole thing.
+Run every hunk through every question below.
 
-Done when every hunk in the scoped diff has been run through the diagnostics below.
+1. **Abstraction**: does this helper/type/layer have a distinct responsibility, or more than one caller now? (A deliberate boundary can earn its place with one caller; say why.)
+2. **Defense**: name the concrete, reachable scenario where this guard or fallback fires.
+3. **Configuration**: does any caller pass a non-default value?
+4. **State**: could this stored or synced value be derived at the use-site? Is there a second authority for the same fact? In async or stateful code, ownership, ordering, and cancellation facts are load-bearing; only redundant bookkeeping is a cut.
+5. **Wrapper**: does it add behavior, or just rename?
+6. **Consolidation**: do the callers solve the same problem, or just look alike?
+7. **Dead code**: can this branch, compat path, or block actually run?
+8. **Orphaned by the change**: does any replaced or rerouted path still have a caller? Authors miss this class most.
+9. **Tests**: does each test pin a behavior no other test pins, using only the setup that behavior needs?
 
-## The diagnostics
+Answer every caller and reachability claim from the codebase, never from the diff alone.
 
-A finding is any question you can't answer "yes, definitely".
+**Engine (RepoPrompt available):** run `context_builder` with `response_type: "review"`; its discovery pulls in out-of-diff callers. Put the confirmed scope in `<context>`, and the nine questions verbatim in `<task>` plus:
 
-### 1. Premature abstraction
+> Bias toward removal. Report only cuts: code to delete, inline, or collapse.
 
-For each new function, hook, component, type, or file: **is it used in more than one place right now?** If not, is the second caller genuinely coming — not "might be useful someday"?
+The oracle proposes, you confirm: verify every finding against the actual code before reporting it. Follow up in the same chat (`ask_oracle`, `new_chat: false`) for anything unclear.
 
-### 2. Defensive coding
+**Fallback (no RepoPrompt):** run the questions yourself, with a search for every caller count.
 
-For each null check, try/catch, optional chain, fallback, or guard: **name a specific scenario where this branch triggers.** If you can't, it's noise — it hides real bugs and inflates surface area.
+Done when every hunk has faced every question and every finding is verified against the code.
 
-### 3. Speculative configurability
+## 3. Classify
 
-For each prop, option, or parameter: **does any caller pass a non-default value?** If every caller passes the same thing, the option is dead weight.
+Sort what the change does into **load-bearing** (required behavior, including compatibility guarantees) and **discretionary** choices. Then:
 
-### 4. Derived state pretending to be state
+- **CUT**: load-bearing behavior unchanged; equivalence shown by callers, contracts, or tests.
+- **CONSIDER**: plausible, but equivalence needs judgment or more proof.
+- **SCOPE DECISION**: drops or changes load-bearing behavior. A product call, not cleanup.
 
-For each piece of state synced from another value: **could this be computed at the use-site instead?** (React: a `useState` + `useEffect` pair mirroring props is almost always a `useMemo`, a `key` prop, or inline computation.)
+## 4. Report
 
-### 5. Wrapper layers
+One-line verdict first: clean, or N CUT / M CONSIDER / K SCOPE DECISION. Then up to ten findings, highest value first:
 
-For each new wrapper around a library or utility: **does the wrapper add behavior, or just rename things?** Rename-only wrappers are pure indirection.
-
-### 6. DRY against the grain
-
-For each consolidation of "similar" code: **are the callers solving the same problem, or do they just look alike?** Coupling distinct concerns under one abstraction costs more than the duplication.
-
-### 7. Dead branches and vestigial code
-
-Code paths marked "shouldn't happen", legacy compatibility shims with no caller, commented-out blocks, TODOs with no owner — all candidates for removal.
-
-### 8. Code orphaned by the change
-
-For each replaced or rerouted code path: **does the old path still have a caller?** The diff can make pre-existing code dead — a superseded branch, a helper whose last caller just left. Authors miss this class most.
-
-## The engine
-
-Diagnostics 1, 3, 5, and 8 hinge on callers *outside* the diff — they can never be answered from the diff alone.
-
-**Primary path (RepoPrompt available):** run `context_builder` with `response_type: "review"`. Its discovery pulls in the out-of-diff callers wholesale. Embed the removal bias in the instructions — include all eight diagnostics verbatim in the `<task>`, plus:
-
-> Bias toward removal. Report only cuts — code that should be deleted, inlined, or collapsed. A suggestion to *add* anything (guards, handling, abstraction, tests) is out of scope for this review.
-
-State the confirmed comparison scope in `<context>`. When the oracle's findings come back, verify each against the actual diff before reporting it — the oracle proposes, you confirm. Follow up in the same chat (`ask_oracle`, `new_chat: false`) for anything unclear.
-
-**Fallback (no RepoPrompt tools):** run the diagnostics yourself over the diff, and verify caller counts for 1, 3, 5, and 8 with a search — never answer them from the diff alone.
-
-## Output
-
-Produce a findings list, **don't edit**. Cap at ~10 findings, worst first — ranking is part of the review; a triaged shortlist beats an exhaustive dump. Format each finding:
-
-- **Location** — `file:line` or function name
-- **Finding** — what's over-engineered, in one sentence
-- **Why it's noise** — which diagnostic question it fails
-- **Suggested cut** — concrete change (delete, inline, replace with X)
-- **Severity** — `cut` (clearly dead), `consider` (judgment call), `flag` (worth a thought)
-
-Note in each finding whether the cut is behavior-preserving; if it isn't, cap severity at `consider`.
-
-Group by severity, `cut` first. If nothing meaningful is wrong, say so plainly — don't manufacture findings to look thorough. A clean diff is a valid result.
-
-## Example finding
+- **Location**: `file:line`
+- **Cut**: delete / inline / collapse into X
+- **Evidence**: which question it fails, with callers, contracts, or tests cited
+- **Must preserve**: the behavior and invariants the cut keeps
+- **Class**: CUT / CONSIDER / SCOPE DECISION
 
 > **Location:** `src/hooks/use-user-display.ts:1-12`
-> **Finding:** New hook wraps `user.name || user.email` with `useMemo`, used in one component.
-> **Why it's noise:** Premature abstraction (one caller) + unnecessary memoization (string OR, no measurable cost).
-> **Suggested cut:** Inline the expression at the call site; delete the hook file.
-> **Severity:** `cut`
+> **Cut:** Inline `user.name || user.email` at the call site; delete the hook.
+> **Evidence:** Abstraction, one caller (`ProfileCard.tsx:14`); the `useMemo` guards a string OR.
+> **Must preserve:** name-then-email fallback.
+> **Class:** CUT
 
-## When this skill is the wrong fit
+Then: the order to apply the CUTs, independent ones first; substantial mechanisms you examined and kept, each with its concrete reason; and coverage gaps.
 
-This skill is specifically for _reducing surface area_. Redirect when the ask is different:
+A clean result, with its kept mechanisms listed, is a complete review. The report is the deliverable; the run ends when it's delivered.
 
-- General review (bugs, correctness, security) → `aa-second-opinion`
-- Commit boundaries (one commit or several) → `aa-commit-clarity`
-- Architecture critique / design questions → consult Oracle in `plan` mode
+## Other asks
 
-If the ask fits but you have nothing to cut, that's the clean-diff result from Output above.
+This skill reduces surface area. For other reviews:
+
+- Bugs, correctness, security → `aa-second-opinion`
+- Commit boundaries → `aa-commit-clarity`
+- Architecture or design critique → Oracle in `plan` mode
