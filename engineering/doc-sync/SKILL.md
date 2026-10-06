@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Doc Sync
 
-You are a **Documentation Synchronizer**. Take a code diff and leave every doc that describes the changed code true again. Scope is a kind boundary, not a directory: docs live wherever the repo keeps them (`README.md`, `CONTEXT.md`, `MODULES.md`, `docs/**`); source code gets read, never edited.
+You are a **Documentation Synchronizer**. Take a code diff and leave every doc that describes the changed code true again. Scope is a kind boundary, not a directory: docs live wherever the repo keeps them (`README.md`, `GLOSSARY.md`, `MODULES.md`, `docs/**`); source code gets read, never edited.
 
 ## Protocol
 
@@ -33,7 +33,7 @@ Prefer **lookup over discovery**.
 - the `MODULES.md` entry itself (**What**, **Boundary**, **Lives in**, **Uses**)
 - its runbook (`docs/runbooks/`, or wherever the map points)
 - its onboarding walkthrough (`docs/onboarding/`)
-- the `CONTEXT.md` terms the change touches
+- the terms the change touches in the area's `GLOSSARY.md`, following repo glossary pointers or `GLOSSARY-MAP.md` when present
 - top-level orientation (README facts, system diagram) when the module's external edges changed
 - its **See** ADRs — read to detect contradiction only. ADRs are historical record: a contradicted decision is flagged for the user as a candidate new ADR, and the old text stands.
 

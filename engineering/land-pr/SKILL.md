@@ -1,6 +1,6 @@
 ---
 name: land-pr
-description: Merge a PR/MR: strategy verdict, verified history cleanup, merge. Use for every merge, whether the user asked ("land this", "ship it") or you decided to merge, and to answer "rebase or merge?".
+description: 'Merge a PR/MR: strategy verdict, verified history cleanup, merge. Use for every merge, whether the user asked ("land this", "ship it") or you decided to merge, and to answer "rebase or merge?".'
 ---
 
 # Land PR
@@ -53,7 +53,7 @@ Then check, after `git fetch origin`:
 
 Read the series in full — `git log <base>..HEAD --format=fuller` and `git diff <base>...HEAD --stat` (three dots) — and classify every commit: valid building block, fixup/correction, or false trail. While reading, also scan for deployment-impact signals — migrations, new env-var reads, cron/worker/queue/cache/API-contract changes. **Done when** each commit has a classification, grounded in messages and diff shape, not subject lines alone, and the impact scan has a result.
 
-If the scan flagged anything, run `deploy-check` on `<base>...HEAD` before presenting the verdict. A **red** deploy-check verdict changes the landing strategy itself (usually an expand/contract split into two PRs) — fold that into the verdict rather than landing as planned.
+If the scan flagged anything, call the Skill tool with `deploy-check` on `<base>...HEAD` before presenting the verdict. A **red** deploy-check verdict changes the landing strategy itself (usually an expand/contract split into two PRs) — fold that into the verdict rather than landing as planned.
 
 Then present the verdict in this shape — the three-jobs rationale is required, not decoration; it is how Atila learns why this method fits this PR:
 
@@ -78,7 +78,7 @@ Stop here and wait. If the invocation was advisory ("rebase or merge?"), this is
 On go-ahead only:
 
 1. **Backup ref** — `git branch backup/<branch>-before-history-cleanup-<YYYYMMDD>` at the current head. It stays after the merge; the summary reports it.
-2. **Rebase onto fresh base first** when the branch is behind — the fold and the update are one rebase. Verifying boundaries against the *new* base is the point: a server-side rebase at merge time re-creates commits without re-running anything. If conflicts arise, that is `resolving-merge-conflicts` territory — pause and surface, don't improvise.
+2. **Rebase onto fresh base first** when the branch is behind — the fold and the update are one rebase. Verifying boundaries against the *new* base is the point: a server-side rebase at merge time re-creates commits without re-running anything. If conflicts arise, pause and surface them to Atila before resolving them; continue the rebase only after the resolution is agreed.
 3. **Build each retained commit** and verify at every boundary: the project's test suite, typecheck, and formatter all pass. This is the load-bearing promise — a bisect must never land on a broken or lying intermediate commit.
 4. **Commit messages** follow `commit-me`'s conventions. Two rules restated because they fail silently: no attribution footers, and `Refs #N` never `Closes`/`Fixes`.
 5. **Prove equivalence** — `git rev-parse HEAD^{tree}` matches the backup ref's tree. The reviewed code and the rewritten code are byte-identical; only the history changed.

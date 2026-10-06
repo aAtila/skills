@@ -1,6 +1,6 @@
 ---
 name: aa-simplify
-description: Cut-focused review of recent changes: what to delete, inline, or collapse. Use when the user asks to simplify or trim, or doubts a change ("over-engineered?", "did I overdo it?").
+description: 'Cut-focused review of recent changes: what to delete, inline, or collapse. Use when the user asks to simplify or trim, or doubts a change ("over-engineered?", "did I overdo it?").'
 ---
 
 # Simplify

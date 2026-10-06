@@ -32,4 +32,4 @@ Same protocol; the existing doc is its own exemplar. The verification table and 
 /onboarding the payment webhooks in this repo — I need to review a PR touching them
 ```
 
-The skill proceeds silently without CONTEXT.md/MODULES.md, maps the area by hand, and falls back to the bundled skeleton if `docs/onboarding/` is empty.
+The skill proceeds silently without GLOSSARY.md/MODULES.md, maps the area by hand, and falls back to the bundled skeleton if `docs/onboarding/` is empty.

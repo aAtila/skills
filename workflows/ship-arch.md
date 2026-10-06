@@ -71,7 +71,7 @@ Dispatch one cold reviewer (`design` role, `workflow_name: "Review"`), brief kep
 
 > Review the recently committed changes for candidate C<n> of issue #<issue>. Besides the code review, grade the implementation against that candidate's stated problem, solution, and done-when — does it achieve the goal?
 
-Triage the findings **warm, in this session** — call the Skill tool with `apply-review` and follow its orchestrated mode. Interrogate the reviewer by steering its session for anything contestable, one finding per steer. Verify applied fixes against the affected module's full test suite (a cold fix is the change most likely to break a contract the reviewer never saw), then commit them as their own commit via `commit-me`, `Refs #<issue>` — separate from the implementation commit so a bad fix reverts alone.
+Triage the findings **warm, in this session** — read `~/.agents/skills/apply-review/SKILL.md` (or its Claude skills counterpart) and follow its orchestrated mode. Interrogate the reviewer by steering its session for anything contestable, one finding per steer. Verify applied fixes against the affected module's full test suite (a cold fix is the change most likely to break a contract the reviewer never saw), then commit them as their own commit via `commit-me`, `Refs #<issue>` — separate from the implementation commit so a bad fix reverts alone.
 
 ### e. Settle the candidate
 
@@ -87,7 +87,7 @@ Dismiss the implementer session once recorded (`agent_manage op=cleanup_sessions
 Runs only if at least one candidate landed; otherwise skip to the rollup comment and retro.
 
 1. **PR.** Push the branch; call the Skill tool with `draft-pr` and tell it explicitly to open the PR. Body references the audit issue with `Refs #<issue>` — never `Closes`; the verifier closes it deliberately.
-2. **Cold verifier.** Dispatch a fresh `engineer` agent: "Load the `triage` skill. Audit issue #<issue> — the selected candidates are implemented and the PR is open at <url>. Verify each landed candidate against its section's goal and the checklist state; close the issue with a rollup comment if everything checks out, report any gap instead of closing." Unmet gaps come back to you: follow-up dispatch or user escalation, your call by size.
+2. **Cold verifier.** Dispatch a fresh `engineer` agent: "Read `~/.agents/skills/triage/SKILL.md` (or its Claude skills counterpart) and follow it. Audit issue #<issue> — the selected candidates are implemented and the PR is open at <url>. Verify each landed candidate against its section's goal and the checklist state; close the issue with a rollup comment if everything checks out, report any gap instead of closing." Unmet gaps come back to you: follow-up dispatch or user escalation, your call by size.
 3. **Rollup to the user**: per-candidate outcomes (landed/rejected/dropped/blocked with reasons), the PR link, held review findings.
 4. **Caveats ledger.** Append any environment quirk this run diagnosed that the ledger doesn't list (create the issue if the repo lacks one: `gh issue create --label caveats --title "Known caveats"`); each entry states symptom, repro command, expected signature, and date. Prune entries whose quirk didn't reproduce when its gate ran this run.
 5. **Retrospective — always, and cold.** Export your transcript (`agent_manage op=extract_handoff`, `output_path` in a temp location outside the repo). Dispatch a fresh agent whose brief is pointers only — this workflow file and the export:

@@ -1,6 +1,6 @@
 ---
 name: qa-plan
-description: Generate a QA / acceptance checklist for a just-built change, derived from its intent rather than its diff. Run AFTER implementing, when you'd ask "how do I QA what we built?". Reads the issue / acceptance criteria first — before the code — so the plan probes for gaps instead of rubber-stamping what shipped. Output is a checklist a human or agent can walk; running it is a separate opt-in step. Use for a manual test plan, QA plan, or acceptance walkthrough. NOT verify (drives the app; this writes the plan it drives), NOT tdd (automated, test-first; this is acceptance, test-after), NOT feature-spec / to-issues (define intent before building; this consumes it after).
+description: Generate a QA / acceptance checklist for a just-built change, derived from its intent rather than its diff. Run AFTER implementing, when you'd ask "how do I QA what we built?". Reads the issue / acceptance criteria first — before the code — so the plan probes for gaps instead of rubber-stamping what shipped. Output is a checklist a human or agent can walk; running it is a separate opt-in step. Use for a manual test plan, QA plan, or acceptance walkthrough. NOT verify (drives the app; this writes the plan it drives), NOT tdd (automated, test-first; this is acceptance, test-after), NOT feature-spec / to-tickets (define intent before building; this consumes it after).
 disable-model-invocation: true
 ---
 
@@ -115,8 +115,8 @@ Note step [3]: the spec never named the unregistered-email case, but this change
 | --------------------------------------- | ----------------------------------------------- | ----------------------------------------------------- |
 | Drive the app to observe the change     | `verify` / `run` / `agent-browser`              | They act; this writes the plan they act on.           |
 | Write automated unit/integration tests  | `tdd`                                           | Code-contract, test-first; this is intent-acceptance. |
-| Define what to build                    | `feature-spec` / `aa-design-spec` / `to-issues` | Produce the intent (before); this consumes it (after).|
-| Transcribe reported bugs into a tracker | deprecated `qa`                                 | That's backward (bugs→issues); this is forward.       |
+| Define what to build                    | `feature-spec` / `to-spec` / `to-tickets` | Produce the intent (before); this consumes it (after).|
+| Evaluate reported bugs in a tracker     | `triage`                                        | That's backward (reports→decisions); this is forward. |
 
 ## Before you hand over the plan
 

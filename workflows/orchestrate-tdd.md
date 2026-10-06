@@ -152,7 +152,7 @@ For an uncommitted review, substitute the exact snapshot path and base SHA and e
 
 ### 3. Triage warm
 
-Call the Skill tool with `apply-review` in this session and follow its **orchestrated mode**. Recover delegated implementation details from code or the implementing agent when a finding turns on them.
+Read `~/.agents/skills/apply-review/SKILL.md` (or its Claude skills counterpart) in this session and follow its **orchestrated mode**. Recover delegated implementation details from code or the implementing agent when a finding turns on them.
 
 Ask the reviewer about unclear or contestable findings: quote one finding, identify the concrete source evidence in question, and ask one focused question. Use `steer` unless the session is waiting for input. Judge the resulting evidence; withdrawal alone does not settle correctness.
 
@@ -175,12 +175,12 @@ After Phase 5 resolves, verify the final integrated state, including any review 
   "op":"start",
   "model_id":"engineer",
   "session_name":"IMPL #123 · Triage",
-  "message":"Call the Skill tool with `triage`. Verify <issue URL> against <final revision or snapshot> in <absolute checkout path>. Read <plan acceptance/specification sections> and honor <specific live-action and issue-closure constraints>. Check every acceptance criterion and report the evidence. Close the issue only if all criteria are met and issue closure is authorized for this run; otherwise report unmet criteria or the remaining closure action.",
+  "message":"Read `~/.agents/skills/triage/SKILL.md` (or its Claude skills counterpart) and follow its verification process. Verify <issue URL> against <final revision or snapshot> in <absolute checkout path>. Read <plan acceptance/specification sections> and honor <specific live-action and issue-closure constraints>. Check every acceptance criterion and report the evidence. Close the issue only if all criteria are met and issue closure is authorized for this run; otherwise report unmet criteria or the remaining closure action.",
   "detach":true
 }}
 ```
 
-Use the final implementation revision when review needed no fixes. Without an issue, verify the request and plan's done criteria on that same final state; absence of an issue does not waive acceptance. If `triage` cannot be resolved, have the verifier check the criteria directly and report the unavailable skill.
+Use the final implementation revision when review needed no fixes. Without an issue, verify the request and plan's done criteria on that same final state; absence of an issue does not waive acceptance. If the `triage` file is unavailable, have the verifier check the criteria directly and report the missing reference.
 
 Monitor the verifier through Phase 4. Address in-scope unmet criteria with follow-up implementation, verification, and review as warranted, then recheck acceptance. Continue until criteria are satisfied, the user agrees to a deferral, or a specific blocker requires input. A dispatched follow-up or an item merely listed in a rollup is still unfinished work. Confirm tracker closure before reporting an issue closed.
 
