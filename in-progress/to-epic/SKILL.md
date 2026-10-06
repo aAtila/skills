@@ -10,17 +10,17 @@ Frame a cross-repo effort as an **Epic** — the r3call table-of-contents issue 
 
 Do NOT interview the user for the goal — synthesize the ratified Decision you are already working from. The repo split and the Contract are **recommendations**; Atila ratifies them at the quiz gate before anything publishes.
 
-The issue tracker vocabulary and the wayfinding operations (the sub-issue and dependency `gh api` calls) live in r3call's `docs/agents/issue-tracker.md` — call the Skill tool with `setup-matt-pocock-skills` in r3call if they are missing.
+The issue tracker vocabulary and the wayfinding operations (the sub-issue and dependency `gh api` calls) live in r3call's `docs/agents/issue-tracker.md` — if they are missing, ask Atila to run `/setup-matt-pocock-skills` in r3call before continuing.
 
 ## Process
 
 ### 1. Anchor to the ratified Decision
 
-An Epic implements a Decision that is already **Fact** — an ADR in `docs/adr/`, or a `CONTEXT.md` entry. Cite it; this is the Epic's trace to Fact. If the effort has no ratified Decision behind it, stop: it is still Deliberation. Take it to `/grill-with-docs` first.
+An Epic implements a Decision that is already **Fact**, recorded in an ADR in `docs/adr/` or the repo-designated ratified decision/current-state record. Cite that record; this is the Epic's trace to Fact. Use the area's `GLOSSARY.md` for terminology, following repo glossary pointers or `GLOSSARY-MAP.md` when present; a term definition is not a Decision. If the effort has no ratified Decision behind it, stop: it is still Deliberation. Ask Atila to run `/grill-with-docs` first; it calls `domain-modeling` to maintain the glossary and ADRs.
 
 ### 2. Map the repos in scope
 
-Name every code repo the effort touches and what part of the effort each owns. Prefer the fewest repos that deliver the goal. If one repo carries the whole change, stop and use `/to-spec` — there is no Epic to author.
+Name every code repo the effort touches and what part of the effort each owns. Prefer the fewest repos that deliver the goal. If one repo carries the whole change, stop and ask Atila to run `/to-spec`; there is no Epic to author.
 
 ### 3. Settle the Contract
 
@@ -50,7 +50,7 @@ Publish the Epic to r3call's issue tracker using the template below. Open the bo
 
 For each repo in scope, in Contract sequence:
 
-- run `/to-spec` in that repo to publish its Spec — one Spec per repo, each referencing the Epic as its parent;
+- ask Atila to run `/to-spec` in that repo to publish its Spec, then resume with the result: one Spec per repo, each referencing the Epic as its parent;
 - attach the Spec to the Epic as a native cross-repo **sub-issue**;
 - add a native **blocked_by** edge for every Contract dependency, so the Epic surfaces the live gate.
 
@@ -66,7 +66,7 @@ What the cross-repo effort achieves, from the ecosystem's perspective — one pa
 
 ## Decision
 
-A link to the ratified ADR (`docs/adr/…`) or `CONTEXT.md` entry this Epic implements. The Epic's trace to Fact.
+A link to the ratified ADR (`docs/adr/…`) or repo-designated decision/current-state record this Epic implements. The Epic's trace to Fact; glossary definitions supply terminology, not implementation intent.
 
 ## Repos in scope
 

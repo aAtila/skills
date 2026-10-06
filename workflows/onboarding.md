@@ -34,7 +34,7 @@ Done when the user has named one area and one goal. If they named both in their 
 
 ## Step 2: Ground in the repo's domain docs
 
-Read, if they exist: `CONTEXT.md` (glossary — use its vocabulary everywhere, never the synonyms it avoids), the target's entry in `MODULES.md`, and the ADRs that entry lists under **See**. If none exist, proceed silently.
+Read the area's `GLOSSARY.md` if it exists, following the repo's glossary pointers or `GLOSSARY-MAP.md` when present. Use its vocabulary throughout, never the synonyms it lists under `_Avoid_`. Also read the target's entry in `MODULES.md` and the ADRs that entry lists under **See**, if they exist. If none exist, proceed silently.
 
 Also check `docs/onboarding/` for an existing doc. If one exists, it is your **exemplar**: mirror its section structure and depth in Step 5. The skeleton below is only the fallback for a first-ever doc.
 
@@ -106,7 +106,7 @@ The doc is done only when every row passes:
 |---|---|
 | File path | exists (`file_search`) |
 | Command | matches `package.json` scripts |
-| Domain term | matches `CONTEXT.md` definition |
+| Domain term | matches the area's `GLOSSARY.md` definition |
 | Design decision | linked to its ADR, not re-derived |
 | Config value / env var | lives in the linked runbook, not copied here |
 

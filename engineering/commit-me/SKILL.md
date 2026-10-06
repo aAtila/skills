@@ -1,6 +1,6 @@
 ---
 name: commit-me
-description: Commit changes: format, write a conventional message, stage, commit. Use for every git commit, whether the user asked ("commit this", "wrap up") or you decided to commit your own work.
+description: 'Commit changes: format, write a conventional message, stage, commit. Use for every git commit, whether the user asked ("commit this", "wrap up") or you decided to commit your own work.'
 ---
 
 # Commit

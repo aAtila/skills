@@ -23,10 +23,10 @@ Changed paths → MODULES.md **Lives in** lookup → the owning module's whole d
 ## After a vocabulary or concept rename
 
 ```
-/doc-sync we renamed Consumer cursor semantics in the last 3 commits — check CONTEXT.md, MODULES.md and anything downstream
+/doc-sync we renamed Consumer cursor semantics in the last 3 commits — check GLOSSARY.md, MODULES.md and anything downstream
 ```
 
-Exercises the kind-boundary scope: root-level docs (CONTEXT.md, MODULES.md, README) are in bounds, not just `docs/`.
+Exercises the kind-boundary scope: root-level docs (GLOSSARY.md, MODULES.md, README) are in bounds, not just `docs/`.
 
 ## As a scheduled sweep
 

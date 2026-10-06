@@ -133,7 +133,7 @@ Push the spec branch. A closed ticket must always point at commits that exist on
 	"op":"start",
 	"model_id":"engineer",
 	"session_name":"SPEC #<spec> · Triage #<ticket>",
-	"message":"Call the Skill tool with `triage`. Read ticket <ref> and notes issue <ref>. Implementation at <head SHA> is committed and pushed on branch <spec-branch> in checkout <checkout>. Verify all acceptance criteria are met at that commit. Close the ticket if everything checks out; report any unmet AC instead of closing."
+	"message":"Read `~/.agents/skills/triage/SKILL.md` (or its Claude skills counterpart) and follow its verification process. Read ticket <ref> and notes issue <ref>. Implementation at <head SHA> is committed and pushed on branch <spec-branch> in checkout <checkout>. Verify all acceptance criteria are met at that commit. Close the ticket if everything checks out; report any unmet AC instead of closing."
 }}
 ```
 
@@ -164,7 +164,7 @@ Update the notes-issue Ledger row (status, SHAs, files) and comment the commit S
 
 Supply authoritative requirements as pointers and let the reviewer form its own conclusions. Wait with `agent_run op=wait`.
 
-2. **Triage and fix.** Call the Skill tool with `apply-review`. Select orchestrated mode. Resolve unclear findings by steering the reviewer; assess conflicts with spec decisions using that skill's evidence rule. Apply accepted fixes, using narrow agents for behavioural or multi-file changes and direct edits for mechanical ones. Verify under the Phase-1 gate policy. Call the Skill tool with `commit-me`. Record fixes in a **Review fixes** Ledger row with SHAs, files, and validation evidence. Have the reviewer check changed behaviour and affected findings at the new head; reuse unaffected findings from the original review. Pause if a fix requires an unresolved architecture or scope decision that invalidates closed tickets. Before opening the PR, push and reconcile every commit in the PR range against the Ledger. Investigate unexplained commits, and pause if ownership cannot be established. Record the final reviewed head and confirm it matches the pushed PR head.
+2. **Triage and fix.** Read `~/.agents/skills/apply-review/SKILL.md` (or its Claude skills counterpart). Select orchestrated mode. Resolve unclear findings by steering the reviewer; assess conflicts with spec decisions using that skill's evidence rule. Apply accepted fixes, using narrow agents for behavioural or multi-file changes and direct edits for mechanical ones. Verify under the Phase-1 gate policy. Call the Skill tool with `commit-me`. Record fixes in a **Review fixes** Ledger row with SHAs, files, and validation evidence. Have the reviewer check changed behaviour and affected findings at the new head; reuse unaffected findings from the original review. Pause if a fix requires an unresolved architecture or scope decision that invalidates closed tickets. Before opening the PR, push and reconcile every commit in the PR range against the Ledger. Investigate unexplained commits, and pause if ownership cannot be established. Record the final reviewed head and confirm it matches the pushed PR head.
 
 3. **Draft and open the PR.** Call the Skill tool with `draft-pr`. Invoke its draft-and-open branch; this workflow explicitly instructs opening the PR. Reuse an existing PR for this branch on resume. Tickets are already closed; only the completed spec uses the PR's `Closes` line. The user reviews the open PR on their own time; the run does not block here.
 

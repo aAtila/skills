@@ -33,7 +33,7 @@ Deep Plan, Review, Orchestrate, Optimize, Refactor, and Investigate ship with Re
 
 ## Workflows still living only in the live directory
 
-`autoloop.md`, `catch-up.md`, `doc-sync.md`, `onboarding.md`, and `worktree-orchestrate-custom.md` are unversioned. Bring one into the repo and symlink it before editing it.
+`review-custom.md` and `worktree-orchestrate-custom.md` have no source counterpart in this repo. Bring one into the repo and symlink it before editing it. `catch-up.md`, `doc-sync.md`, and `onboarding.md` are versioned here; keep their live entries linked or copied from these source files.
 
 ## Auditing a run
 
