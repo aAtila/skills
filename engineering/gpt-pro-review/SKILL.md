@@ -45,7 +45,9 @@ Pro reviews take minutes. On Ctrl-C or any exit before capture, print `surf orac
 
 ## Step 5: Deliver
 
-Fetch the current head and comments:
+For an incomplete review, return the captured response with its coverage gaps, model, and job ID. No PR comment is expected; do not treat independently verified findings from partial coverage as a completed review.
+
+For a complete review, fetch the current head and comments:
 
 ```sh
 gh pr view <PR URL> --json headRefOid,comments
