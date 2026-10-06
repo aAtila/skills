@@ -8,9 +8,9 @@ Sent verbatim by Step 3 of `gpt-pro-review`, with `<PR URL>`, `<HEAD SHA>`, and 
 Review ID: <REVIEW ID>
 Requested head SHA: <HEAD SHA>
 
-Review this revision and confirm the diff and source you inspect correspond to the requested head SHA. If you cannot establish that, return an incomplete-review response explaining the limitation instead of a verdict. Include the review ID and actual reviewed head SHA in your response and PR comment so the caller can verify delivery and revision coverage.
+Review the provided PR through GitHub, using full file context and any supplied plan/spec. Assess whether the changes are **correct, minimal, idiomatic, secure, performant, testable, maintainable, and biased toward one canonical current-state implementation**. Report concrete, evidence-backed risks that the diff causes or worsens, including regressions, fallback behavior that hides bugs, and disproportionate long-term complexity.
 
-Review this PR through GitHub. The diff is authoritative for what changed; the PR description and the surrounding code supply intent. Where intent is thin, infer it from codebase patterns and state your assumptions.
+The diff is authoritative for what changed; the PR description, surrounding code, and plan/spec supply intent and any approved implementation boundary. If intent or scope is ambiguous, infer it from codebase patterns and state assumptions explicitly. A review finding is not authority to expand an approved scope: when a necessary remedy crosses that boundary, classify it as requiring scope or plan revision rather than presenting the expansion as ordinary remediation.
 
 Judge the change on correctness, regressions, security, reliability, tests, and long-term maintainability, in that order. Prefer designs whose correctness is easy to see over designs whose deficiencies are merely hard to find, and apply that bar proportionally to the change.
 
@@ -26,9 +26,12 @@ For each new defensive check, ask whether the better fix is to strengthen the ty
 
 1. Summarize what the change does and which flows it touches.
 2. Check proportionality: compare the diff footprint and new obligations with the stated requirement.
-3. Walk each hunk: behavior before versus after, including edge and error paths; unnecessary complexity; alignment with existing patterns and utilities.
-4. Cross-check tests: new and changed behavior covered, error paths covered, tests assert behavior rather than implementation.
-5. Generate concrete fixes, preferring removal or simplification toward a single explicit path.
+3. Identify applicable risk surfaces: APIs, persistence, concurrency, authorization, data models, and external contracts.
+4. Walk each hunk: behavior before versus after, including edge and error paths; impact on identified risk surfaces; unnecessary complexity; alignment with existing patterns and utilities.
+5. Cross-check tests: new and changed behavior covered, error paths covered, tests assert behavior rather than implementation.
+6. Generate concrete fixes, preferring removal or simplification toward a single explicit path.
+
+When a prior-finding ledger is supplied for a repeated review, verify the recorded corrections and assess regressions introduced by them. Reopen an adjudicated finding only with new source evidence. For each genuinely new blocker, identify whether it comes from the original diff or subsequent remediation.
 
 ## Findings
 
@@ -36,18 +39,22 @@ Each finding carries a confidence: Verified means confirmed against the diff or 
 
 Classify each finding under exactly one heading, ordered by severity within it:
 
-- Blocking: a Verified correctness, regression, security, reliability, or requirement failure caused or worsened by the diff.
-- Scope revision required: a Verified problem serious enough to prevent shipping, whose remedy exceeds the PR's stated scope. Explain the conflict; the expansion is a decision for the author, not a fix to prescribe.
-- Non-blocking: minor findings and optional improvements.
+- Blocking: a Verified Critical or Major correctness, regression, security, reliability, or requirement failure caused or worsened by the diff, whose necessary remedy fits within the PR's scope.
+- Scope revision required: a Verified Critical or Major problem caused or worsened by the diff, serious enough to prevent shipping, whose necessary remedy exceeds the approved scope or implementation boundary. Explain the conflict; the expansion is a decision for the author, not a fix to prescribe.
+- Non-blocking: minor findings, optional improvements, and unconfirmed risks or questions.
 - Pre-existing: issues the diff neither causes nor worsens. Listed briefly; they inform but never block.
 
-For each finding give: severity (Critical, Major, Minor, Nitpick), confidence, location as path:line or nearest identifier, the problem, the fix with code where helpful, and one line on why it matters.
+For each finding give: severity (Critical, Major, Minor, Nitpick), confidence, location as path:line or nearest identifier, the problem, the fix or required scope decision with code where helpful, and one line on why it matters.
 
 Calibrate volume. Fewer Verified findings beat exhaustive lists. Nitpicks belong only when no structural issue exists. A clean review with zero manufactured findings is a valid and valuable outcome.
 
 ## Verdict
 
-Ship when no Blocking or Scope-revision finding remains. Needs Work when Blocking findings can be fixed within the PR's scope. Major Rethink when the patch is disproportionate to the requirement or safe remediation needs redesign.
+Issue an overall verdict only after completing the review coverage above:
 
-Post one PR comment containing the review ID, reviewed head SHA, a short summary, the findings by heading, and the verdict with a brief explanation. Recommend specific tests and their assertions only for identified coverage gaps. Ship means no blocking findings in the reviewed revision; CI, required approvals, and other merge gates remain separate. Do not modify the code.
+- Ship when no Blocking or Scope revision required finding remains.
+- Needs Work when Blocking findings can be fixed within the PR's scope without substantial redesign.
+- Major Rethink when a Verified Blocking or Scope revision required finding requires substantial redesign or scope/plan revision. Explain the concrete shipping risk; disproportionate complexity without such a risk is Non-blocking.
+
+For a complete review, post one PR comment containing the review ID, comparison base, reviewed head SHA, a short summary, the findings by heading, and the verdict with a brief explanation. Recommend specific tests and their assertions only for identified coverage gaps. Ship means no blocking findings in the reviewed revision; CI, required approvals, and other merge gates remain separate. Do not modify the code.
 ```
