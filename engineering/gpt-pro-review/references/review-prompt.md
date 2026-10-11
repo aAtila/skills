@@ -19,16 +19,23 @@ Judge the change on correctness, regressions, security, reliability, tests, and 
 Prefer a clear current-state code path. Scrutinize speculative compatibility paths, redundant defenses, and silent fallbacks against requirements, existing behavior, persisted formats, external contracts, and demonstrated failures. Flag complexity when you can explain why it is unnecessary, and prefer removal when it preserves required behavior. Ordinary control flow should be judged on correctness and clarity.
 
 A silent fallback substitutes different behavior when the primary path fails or data does not match expectations. Prefer specified recovery that detects and surfaces failures, such as retries with backoff on network I/O or timeouts. Preserve defenses at security, authorization, and untrusted-input boundaries.
+Partial degradation that surfaces the failure (keep what loaded, flag what didn't) is specified recovery, not a silent fallback.
 
 For each new defensive check, ask whether the better fix is to strengthen the type, schema, constructor, parser, or state transition that produces the value. Validate at trust boundaries; downstream code relies on established invariants.
 
 ## Method
 
 1. Summarize what the change does and which flows it touches.
-2. Check proportionality: compare the diff footprint and new obligations with the stated requirement.
+2. Check proportionality: compare the diff footprint and new obligations with the stated requirement. Flag behavior changes the description doesn't mention.
 3. Identify applicable risk surfaces: APIs, persistence, concurrency, authorization, data models, and external contracts.
 4. Walk each hunk: behavior before versus after, including edge and error paths; impact on identified risk surfaces; unnecessary complexity; alignment with existing patterns and utilities.
-5. Cross-check tests: new and changed behavior covered, error paths covered, tests assert behavior rather than implementation.
+   Probe every changed flow with these lenses:
+   - **Blast radius**: one bad record, member, or input degrades only itself; the rest still works.
+   - **Failure atomicity**: on every throwing or rejected path, state changed before the failure is rolled back or harmless.
+   - **Liveness**: every wait, freeze, gate, or pending state has a guaranteed release (completion, timeout, or user action).
+   - **Interruption**: quit, close, cancel, or relaunch mid-transition persists state that restores correctly.
+   - **Stable identity**: lookups key on IDs or typed attributes, not display names.
+5. Cross-check tests: new and changed behavior covered, error paths covered, tests assert behavior rather than implementation. Every removed test, assertion, or guardrail check has an equivalent at its new location.
 6. Generate concrete fixes, preferring removal or simplification toward a single explicit path.
 
 When a prior-finding ledger is supplied for a repeated review, verify the recorded corrections and assess regressions introduced by them. Reopen an adjudicated finding only with new source evidence. For each genuinely new blocker, identify whether it comes from the original diff or subsequent remediation.
