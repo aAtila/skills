@@ -41,13 +41,14 @@ Then check, after `git fetch origin`:
 - **Dirty working tree** → stop and ask. The changes might belong in the PR — that is `commit-me` / `aa-commit-clarity` territory, not a stash.
 - **Local commits not on the remote PR head** → normal in Atila's flow (review-round fixes). Fold them into the plan and note them in the verdict ("includes unpushed `abc1234`").
 - **Remote commits not local** (`git rev-list --count HEAD..origin/<branch>` > 0) → stop and ask. Someone else touched the branch.
+- **Open review threads** → stop and list them. GitHub: `gh api graphql` on `pullRequest.reviewThreads`, keeping each thread with `isResolved: false` whose last comment is a reviewer's, plus any review left in `CHANGES_REQUESTED`; GitLab: `blocking_discussions_resolved` from `glab mr view --output json`, then the discussions API for the list. Read reviewer comments on the PR itself too: external review reports land there, outside any thread. Each finding is review work, and Atila's `apply-review` is where it happens: name file, line and the finding's first sentence, then resume here once every thread carries a fix commit or a reasoned reply.
 - **Allowed merge methods** — query before verdicting, so the verdict is executable:
   - GitHub: `gh repo view --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed`
   - GitLab: `glab api "projects/:id" --jq .merge_method`
 
   When the ideal method is disabled, say so in the verdict and reason within what the repo allows. Squash-only repos change the calculus: folding is only worth it when the multi-commit series helps the PR reader — otherwise recommend squash and skip the rewrite.
 
-**Done when** base branch, branch sync state, and allowed methods are all known.
+**Done when** base branch, branch sync state and allowed methods are known, and every review thread is answered.
 
 ### Step 2: Verdict — gate 1, and the advisory exit
 
@@ -59,7 +60,7 @@ Then present the verdict in this shape — the three-jobs rationale is required,
 
 > **Verdict: fold-and-clean → rebase-and-merge (3 commits)**
 >
-> - *Review*: served — the PR was reviewed commit-by-commit.
+> - *Review*: served — 2 threads, both answered in `abc1234`.
 > - *Bisect*: commits 4 and 7 codify behavior commit 8 corrects — a false trail.
 > - *Memory*: the final series should read as invariants, not the discovery journey.
 >
@@ -90,7 +91,7 @@ On go-ahead only:
 
 ### Step 4: Land — gate 2
 
-Present the final state: commit list, verification results, `deploy-check`'s runbook when Step 2's scan flagged anything, and each resolution recorded in Step 3.2 (file, the hunk as resolved, one line on what it kept from each side, each side named by its commit) so Atila reviews the resolved code itself. Then ask once. If Atila rejects a resolution, reset the branch to the `-before-history-cleanup-` backup and re-run Step 3 from Step 3.2 with his resolution. On confirmation, `git fetch origin`. When Step 3 ran and the branch is now behind the fetched base, stop and ask Atila whether to re-run Step 3 from Step 3.2: the verified series no longer sits on the base it would land on. Otherwise merge with the verdict's method and delete the feature branch:
+Present the final state: commit list, verification results, `deploy-check`'s runbook when Step 2's scan flagged anything, and each resolution recorded in Step 3.2 (file, the hunk as resolved, one line on what it kept from each side, each side named by its commit) so Atila reviews the resolved code itself. Then ask once. If Atila rejects a resolution, reset the branch to the `-before-history-cleanup-` backup and re-run Step 3 from Step 3.2 with his resolution. On confirmation, `git fetch origin` and re-run the thread query: a force-push can trigger a fresh bot review. When Step 3 ran and the branch is now behind the fetched base, stop and ask Atila whether to re-run Step 3 from Step 3.2: the verified series no longer sits on the base it would land on. Otherwise merge with the verdict's method and delete the feature branch:
 
 ```sh
 # GitHub
