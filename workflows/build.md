@@ -41,7 +41,7 @@ Set this once, up front. Don't rename mid-run unless the scope genuinely changes
 
 Get a lay of the land: `get_file_tree` (`mode:"auto"`), then targeted `file_search` / `get_code_structure` probes on key terms from the task. Skim paths and signatures; full file contents come after the builder selects them.
 
-**Done when** you can restate the task in the codebase's own terms — specific modules, patterns, terminology. That reformulated prompt is this phase's output.
+**Done when** you can restate the task in the codebase's own terms — specific modules, patterns, terminology. That reformulated prompt is this phase's output. When the task changes a signature, a constructor's dependencies or an exported type, the prompt also carries its **footprint**: every call site, found with a `file_search` for the symbol across production code, tests and scripts, named as files the plan must cover. `context_builder` selects by relevance, so callers that only construct the symbol slip past it, and each one found in Phase 3 counts against the coverage rule there.
 
 ## Phase 2: Plan
 

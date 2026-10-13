@@ -133,7 +133,7 @@ Push the spec branch. A closed ticket must always point at commits that exist on
 	"op":"start",
 	"model_id":"engineer",
 	"session_name":"SPEC #<spec> · Triage #<ticket>",
-	"message":"Read `~/.agents/skills/triage/SKILL.md` (or its Claude skills counterpart) and follow its verification process. Read ticket <ref> and notes issue <ref>. Implementation at <head SHA> is committed and pushed on branch <spec-branch> in checkout <checkout>. Verify all acceptance criteria are met at that commit. Close the ticket if everything checks out; report any unmet AC instead of closing."
+	"message":"Read `~/.agents/skills/triage/SKILL.md` (or its Claude skills counterpart) and follow its verification process. Read ticket <ref> and notes issue <ref>. Implementation at <head SHA> is committed and pushed on branch <spec-branch> in checkout <checkout>. Verify all acceptance criteria are met at that commit. The notes issue's Run section records gate evidence by commit and environment: where it covers <head SHA> in an environment you can confirm matches, cite it instead of rerunning the broad gates, and run the tests that prove each criterion. Close the ticket if everything checks out; report any unmet AC instead of closing."
 }}
 ```
 
