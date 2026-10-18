@@ -7,9 +7,11 @@ description: 'Merge a PR/MR: strategy verdict, verified history cleanup, merge. 
 
 Takes a reviewed branch from "ready" to "landed", with two gates and one early exit:
 
-1. **Verdict** — analyze the commit series, recommend a strategy with rationale, propose the final commit list. Stop and wait. If Atila only asked "rebase or merge?", this is the whole job.
-2. **Rewrite** — on go-ahead, clean the history so every retained commit is a valid state, then update the remote branch.
-3. **Land** — on a second confirmation, merge, delete the feature branch, and record a commit map on the PR.
+1. **Verdict** — analyze the commit series, recommend a strategy with rationale, propose the final commit list, then gate 1. If Atila only asked "rebase or merge?", this is the whole job.
+2. **Rewrite** — past gate 1, clean the history so every retained commit is a valid state, then update the remote branch.
+3. **Land** — gate 2, then merge, delete the feature branch, and record a commit map on the PR.
+
+Deploy impact decides whether the gates hold. A **green run** — Step 2's impact scan flagged nothing, or `deploy-check` returned green — passes both gates on its own: present the verdict, then rewrite and land without waiting for Atila. Yellow or red makes a **held run**: each gate waits for his confirmation. A Step 3 conflict turns a green run into a held one, so gate 2 shows Atila the resolutions. Stops that report a problem rather than seek permission (a dirty tree, an open review thread, a landing that doesn't match) hold on every run.
 
 Siblings cover the adjacent jobs: `commit-me` lands a single commit, `aa-commit-clarity` decides boundaries for an uncommitted diff, `draft-pr` describes the branch without reshaping it, `deploy-check` turns a flagged diff into a deployment verdict and runbook. This skill is the reshaping-and-landing step that runs after the PR has been reviewed.
 
@@ -70,16 +72,16 @@ Then present the verdict in this shape — the three-jobs rationale is required,
 > 3. `docs(tracking): record enquiry conversion signal decisions`
 >
 > Repo allows all three merge methods.
-> Deploy impact: yellow — additive migration + new env var; runbook at gate 2. *(or: "none — merge is the whole deploy story")*
+> Deploy impact: yellow — additive migration + new env var; runbook at gate 2. *(or: "green — merge is the whole deploy story; continuing without gates")*
 
-Stop here and wait. If the invocation was advisory ("rebase or merge?"), this is the deliverable — offer to continue, then leave it. A **preserve-as-is** verdict skips Step 3 on go-ahead and moves straight to Step 4.
+If the invocation was advisory ("rebase or merge?"), this is the deliverable on any run — offer to continue, then leave it. Otherwise a held run stops here for go-ahead, and a green run continues straight on. A **preserve-as-is** verdict skips Step 3 and moves straight to Step 4.
 
 ### Step 3: Rewrite
 
-On go-ahead only:
+Once gate 1 passes:
 
 1. **Backup ref** — `git branch backup/<branch>-before-history-cleanup-<YYYYMMDD>` at the current head, a safety net for the rewrite only. Its tree is the **reference tree** for Step 3.5.
-2. **Rebase onto fresh base first** when the branch is behind — a plain rebase of the unfolded series onto the fetched remote base, then fold on top of the result. Verifying boundaries against the *new* base is the point: a server-side rebase at merge time re-creates commits without re-running anything. Any conflict in Step 3, from this rebase or from the fold whether or not a rebase ran, pauses the rewrite: surface it to Atila before resolving it; continue only after the resolution is agreed. Record each resolution for gate 2 under `$(git rev-parse --git-dir)/land-pr/`, where it outlasts a long verification run: copy the conflicted file there, markers included, before resolving it; after resolving, save `git diff --no-index <copy> <file>` beside it, which shows exactly what resolving changed, one-sided picks included. For a conflict with no text hunk (delete, rename, binary), save the choice as one line. Before folding, `git branch backup/<branch>-rebased-<YYYYMMDD>` at the rebased head; its tree replaces the reference tree.
+2. **Rebase onto fresh base first** when the branch is behind — a plain rebase of the unfolded series onto the fetched remote base, then fold on top of the result. Verifying boundaries against the *new* base is the point: a server-side rebase at merge time re-creates commits without re-running anything. Any conflict in Step 3, from this rebase or from the fold whether or not a rebase ran, pauses the rewrite: surface it to Atila before resolving it; continue only after the resolution is agreed. Record each resolution for gate 2 under `$(git rev-parse --git-dir)/land-pr/`, where it outlasts a long verification run: copy the conflicted file there, markers included, before resolving it; after resolving, save `git diff --no-index <copy> <file>` beside it, which shows exactly what resolving changed, one-sided picks included. For a conflict with no text hunk (delete, rename, binary), save the choice as one line. Before folding, `git branch -f backup/<branch>-rebased-<YYYYMMDD>` at the rebased head; its tree replaces the reference tree.
 3. **Build each retained commit** and verify at every boundary: the project's test suite, typecheck, and formatter all pass. This is the load-bearing promise — a bisect must never land on a broken or lying intermediate commit.
    - **A CI-green tree is already verified.** When Step 3.2 didn't rebase and a boundary's tree (`git rev-parse <commit>^{tree}`) matches a commit whose CI checks all passed, skip local verification for that boundary and cite the run in the verification results; any of the checks above that CI doesn't run still runs locally. The usual match is the final boundary against the remote PR head — the backup ref can carry unpushed commits CI never saw.
    - **Run each suite once per boundary.** Start from the project's CI-mirroring script (e.g. `verify`) plus any of the checks above it leaves out, then deduplicate: where one suite contains another — confirmed in the script or runner config, not the name (e.g. a DB-enabled run that also runs the unit suite) — run only the larger, running the script's other steps individually if it bundles the smaller.
@@ -91,7 +93,9 @@ On go-ahead only:
 
 ### Step 4: Land — gate 2
 
-Present the final state: commit list, verification results, `deploy-check`'s runbook when Step 2's scan flagged anything, and each resolution recorded in Step 3.2 (file, the hunk as resolved, one line on what it kept from each side, each side named by its commit) so Atila reviews the resolved code itself. Then ask once. If Atila rejects a resolution, reset the branch to the `-before-history-cleanup-` backup and re-run Step 3 from Step 3.2 with his resolution. On confirmation, `git fetch origin` and re-run the thread query: a force-push can trigger a fresh bot review. When Step 3 ran and the branch is now behind the fetched base, stop and ask Atila whether to re-run Step 3 from Step 3.2: the verified series no longer sits on the base it would land on. Otherwise merge with the verdict's method and delete the feature branch:
+On a green run the gate passes without a prompt; the closing summary carries the commit list and verification results. On a held run, present the final state: commit list, verification results, `deploy-check`'s runbook when it produced one, and each resolution recorded in Step 3.2 (file, the hunk as resolved, one line on what it kept from each side, each side named by its commit) so Atila reviews the resolved code itself. Then ask once. If Atila rejects a resolution, reset the branch to the `-before-history-cleanup-` backup and re-run Step 3 from Step 3.2 with his resolution.
+
+Once the gate passes, `git fetch origin` and re-run the thread query: a force-push can trigger a fresh bot review. When Step 3 ran and the branch is now behind the fetched base, the verified series no longer sits on the base it would land on: reset the branch to the `-before-history-cleanup-` backup and re-run Step 3 from Step 3.2, asking Atila first on a held run. With the branch current, merge with the verdict's method and delete the feature branch:
 
 ```sh
 # GitHub
