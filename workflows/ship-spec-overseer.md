@@ -2,8 +2,8 @@
 id: 85A342DB-401C-4F47-9528-EA2AA00898F9
 name: "Ship Spec (Overseer)"
 icon: "checklist.checked"
-tooltip: "Ship a spec as one PR under an overseer session"
-description: "Ship a spec's ticket graph as one PR when an overseer session started and oversees this run."
+tooltip: "Ship a whole spec as one PR under an overseer session"
+description: "Ship a spec's ticket graph as one PR when an overseer session oversees the run and the whole spec ships as one unit."
 ---
 
 # Ship Spec (Overseer)
@@ -30,7 +30,7 @@ The overseer names this session `SPEC #<spec>: <short title>`; if the name diffe
 Tracker commands come from the *Tracker adapter* at the end; resolve the tracker first (`git remote get-url origin`).
 
 1. **Fetch the spec and its tickets.** For each ticket, read state, labels, acceptance criteria and blocking edges. Tickets labelled `HITL` or `ready-for-human` are **human tickets**: they gate the graph like any other, and the user works them. A human ticket that accepts the integrated result (blocked by every code ticket, or with criteria that test the whole spec) is an **acceptance ticket**, worked in Phase 4 on the final head.
-2. **Validate the graph.** Every blocking edge resolves to a ticket in the spec, with no cycles. Investigate malformed references; a repair that edits the spec is a pause, since the spec is the user's.
+2. **Validate the graph.** Every blocking edge resolves to a ticket in the spec, the graph has no cycles, and no ticket is a *release point* (see *Pauses*). Investigate malformed references; a repair that edits the spec is a pause, since the spec is the user's.
 3. **Resume check.** Read the notes issue if one is linked. A `complete` run reports its PR to the overseer and stops. An `active` or `interrupted` run recovers the branch, baseline, gates, Ledger and decisions with their sources; a current instruction from the user, direct or quoted by the overseer, outranks the recorded ones. Recorded commits for closed code tickets must be reachable on the remote spec branch; human tickets use their recorded tracker evidence. Investigate discrepancies; pause on one you can't resolve, or on a baseline or ownership fact you can't recover. Recover the active ticket and its child first, and finish steps 4–5 before any dispatch.
 4. **Adopt the worktree.** The overseer created it, bound this session to it, and names it with the branch in its brief. Refresh the remote default and spec refs, then check that `git op=status` shows that branch with a clean tree, and that every commit above its merge-base with the remote default belongs to this spec or its Ledger. Record the worktree path, branch, base SHA and baseline HEAD. A missing worktree, a wrong branch, a dirty tree or an unexplained commit is a pause; the overseer fixes the checkout. If pushing needs the user's direct consent (sandbox or auto-review), ask once now, for this branch and every later push to it, and record the consent in *Run*.
 5. **Baseline and gates.** Take the gate commands, any shared-database lock and the CI stand-in from the overseer's brief, and keep the original baseline on resume. Record each gate's scope (per ticket or final integration) and any unavailable service, with evidence. Read the repo's `caveats` issue if one exists: its entries are checkable claims, and an exemption needs a matching failure signature, suites and count included. Record the blocked, agent-ready and human-ready label names from the repo's triage-label doc (e.g. `docs/agents/triage-labels.md`). **Green** means every applicable gate passes except evidenced baseline exceptions. Record each result with commit SHA, command, environment and outcome, and reuse it only while the tested content (uncommitted changes included) and the environment still match. After a change, rerun the affected and repo-required gates, plus broader checks for integration risk. A newly failing gate needs diagnosis, never a new exemption.
@@ -180,6 +180,7 @@ The one list of pause triggers:
 - Any edit to the spec: a graph repair, a scope change.
 - A worktree that doesn't match the overseer's brief.
 - A frontier holding only human tickets, or a stuck graph.
+- A **release point**: a ticket whose code must reach production before the spec finishes. Either another spec depends on that code (a ticket outside this spec is blocked by it), or a human ticket's work needs earlier tickets deployed while tickets after it remain. Check for one while validating the graph and whenever a ticket reveals one. Stop dispatching and pause for the overseer, which decides whether to split the spec or walk the graph ticket by ticket. The run waits on that decision rather than on the human ticket, and the PR still opens only at close-out.
 - A review fix that would change a recorded decision or reopen a closed ticket.
 - Anything destructive or irreversible (force-push, history rewrite, data loss, deleting remote objects), a merge, or production access. These need the user directly; the overseer relays them.
 
