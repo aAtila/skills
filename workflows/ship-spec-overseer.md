@@ -190,7 +190,7 @@ Everything else (a flaky test, a missing file, an unclear module) you resolve yo
 
 ## Tracker adapter
 
-Resolve the tracker once from `git remote get-url origin` (github.com → GitHub, otherwise your GitLab host). Check `--help` for exact flags: the operations are the contract, the commands are hints. Every comment opens with the attribution prefix the overseer's brief sets, if it sets one.
+Resolve the tracker once from `git remote get-url origin` (github.com → GitHub, otherwise your GitLab host). Check `--help` for exact flags: the operations are the contract, the commands are hints. Every comment opens with the attribution prefix the overseer's brief sets, if it sets one. A repo's `docs/agents/issue-tracker.md`, where it exists, overrides this table: follow its operations and commands, and its label rules in `docs/agents/triage-labels.md`.
 
 | Operation | GitHub (`gh`) | GitLab (`glab`) |
 | --- | --- | --- |
