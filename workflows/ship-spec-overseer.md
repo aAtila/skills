@@ -10,7 +10,7 @@ description: "Ship a spec's ticket graph as one PR when an overseer session over
 
 Spec reference: $ARGUMENTS
 
-You orchestrate one spec: a tracker issue whose tickets form a **task graph** with blocking edges. Your job is coordination: fetch the graph, walk it, dispatch Build It children, verify each ticket, review the whole branch, and open one PR. Around the run, the overseer owns the worktree, landing, the retro and retiring sessions.
+You orchestrate one spec: a tracker issue whose tickets form a **task graph** with blocking edges. Your job is coordination: fetch the graph, walk it, dispatch Build It children, review and verify each ticket, review the whole branch, and open one PR. Around the run, the overseer owns the worktree, landing, the retro and retiring sessions.
 
 Six words carry this workflow:
 
@@ -19,11 +19,11 @@ Six words carry this workflow:
 - **The notes issue** — `Notes: <spec title>`, linked from the spec: run state, research, seams, the Ledger and decisions. The run is its only writer; children and resumed runs read it, and the overseer keeps a pointer to it.
 - **A pause** — an `ask_user` question with your recommended option first, marked "(recommended)", and `timeout_seconds: 900`. Wait before the dependent action; independent work continues while the worktree is safe. The overseer answers routine pauses and relays the rest to the user. *Pauses*, near the end, lists every trigger.
 - **The envelope** — what a child brief carries besides pointers: the task boundary, its refs (ticket, notes issue, spec), worktree, branch and SHA, the confirmed seam, role and ownership. Every child brief ends with the operational rules from the overseer's brief, word for word, because a child inherits none of them. Criteria, research and findings reach children through the refs; a repair steer may name the failing criterion and point at its evidence.
-- **A bounded wait** — every `agent_run op=wait` on a child or reviewer carries `timeout: 600`, and each return checks the session's last activity (`op=poll`). About 20 minutes silent is a **stall**: collect what the session finished, cancel it, and rerun the rest once in a fresh session. A second stall marks that work unavailable: a review axis unavailable, a ticket failed. An `Expired` handle means a live session: re-acquire it with `agent_manage op=list_sessions` and steer the same id, keeping its context.
+- **A bounded wait** — every `agent_run op=wait` on a child or reviewer carries `timeout: 600`, and each return checks the session's last activity (`op=poll`). About 20 minutes silent is a **stall**: collect what the session finished, cancel it, and rerun the rest once in a fresh session. A second stall marks that work unavailable: a review or review axis unavailable, a ticket failed. An `Expired` handle means a live session: re-acquire it with `agent_manage op=list_sessions` and steer the same id, keeping its context.
 
 ## Phase 0: Name the session
 
-The overseer names this session `SPEC #<spec>: <short title>`; if the name differs, set it once with `set_status`. Helpers reuse the prefix: `SPEC #<spec> · Explore`, `· Triage #<ticket>`, `· Review`, `· Standards`, `· Spec`. Build It children name themselves.
+The overseer names this session `SPEC #<spec>: <short title>`; if the name differs, set it once with `set_status`. Helpers reuse the prefix: `SPEC #<spec> · Explore`, `· Review #<ticket>`, `· Triage #<ticket>`, `· Review`, `· Standards`, `· Spec`. Build It children name themselves.
 
 ## Phase 1: Intake
 
@@ -56,7 +56,7 @@ Tracker commands come from the *Tracker adapter* at the end; resolve the tracker
    - *Run*: state (`active`, `interrupted`, `complete`), phase, active ticket and session, worktree, branch, base SHA, baseline and exclusions, push consent, label names, gate inventory and result evidence, PR URL, and this run's IDs as separate fields: CE session ID, provider session or rollout ID, workspace ID, tab ID.
    - *Research notes*: the explore output.
    - *Seams*: the confirmed ticket table, each ticket classed TDD, exempt or human.
-   - *Ledger*: one current row per ticket, rewritten after every event: status, start and final HEAD, every commit SHA, the exact file manifest, repair count, implementer and verifier session IDs, planning route, and pointers to criterion and gate evidence. History and the implementer's handoff notes sit below the row. Preserve existing rows on resume.
+   - *Ledger*: one current row per ticket, rewritten after every event: status (linked to the closing comment once closed), start and final HEAD, bare commit SHAs, repair count, implementer, cold-reviewer and verifier session IDs, and one pointer to the evidence: the ticket's gate results in *Run* and any QA report. Detail is written once, in the ticket's Ledger note below the row (`**#<ticket>** —`): handoff notes, the file-manifest check, both reviews (the in-lane review's chat ID, each finding with its disposition) and history. Preserve existing rows and notes on resume.
    - *Decisions*: each with its source: the user directly, "the user's words, relayed by the overseer", or "the overseer, under the user's delegation". Pause answers and mid-run steering included.
 
 Record a failure before selecting another ticket, and a decision before the action it authorizes.
@@ -73,7 +73,7 @@ Query the tracker, then exclude failed tickets and their downstream subtrees unt
 
 **Human tickets:** when one enters the frontier, send the overseer a notice so the user can work it, and keep dispatching; acceptance tickets wait for Phase 4. When the frontier holds only human tickets, or is empty while human tickets remain open, pause; once the user reports one done, confirm it closed on the tracker before recomputing. An empty frontier with open tickets means the graph is stuck: pause, naming the blocked subtree.
 
-**Parallel group:** frontier tickets with disjoint files touched, no shared stateful resource, and no pattern one would set for another (serial tickets reuse the first one's patterns; parallel ones invent their own). Pause once to propose the group; on yes, the overseer creates and claims a worktree per ticket. Each child commits on `spec/<n>-<slug>/<ticket>` in its worktree. Integrate those branches into the spec branch one at a time, in frontier order, with the full gate after each; then push, verify and close. Suites on a shared resource run only on the integrated spec branch. Integration conflicts are yours to resolve.
+**Parallel group:** frontier tickets with disjoint files touched, no shared stateful resource, and no pattern one would set for another (serial tickets reuse the first one's patterns; parallel ones invent their own). Pause once to propose the group; on yes, the overseer creates and claims a worktree per ticket. Each child commits on `spec/<n>-<slug>/<ticket>` in its worktree, and its cold review (§4) runs on that branch. Integrate those branches into the spec branch one at a time, in frontier order, with the full gate after each, and have the ticket's cold reviewer re-check any conflict resolution; then push, verify and close. Suites on a shared resource run only on the integrated spec branch. Integration conflicts are yours to resolve.
 
 ### 2. Dispatch a Build It child
 
@@ -86,25 +86,43 @@ Record the active ticket and its starting HEAD in the Ledger before dispatch, th
 The brief is pointers plus the envelope:
 
 > Your task is ticket <ref>: read it first (`gh issue view <n>` / `glab issue view <n>`), including its acceptance criteria. Implement exactly that ticket; the spec's other tickets are handled separately.
-> Read notes issue <ref> the same way: research notes for context, the Ledger and earlier tickets' closing comments for what has landed.
+> Read notes issue <ref> the same way: research notes for context, the Ledger notes and earlier tickets' closing comments for what has landed.
 > _(TDD tickets only:)_ Call the Skill tool with `tdd` and follow it. Build at this seam: `<seam>`. It is confirmed; if it looks wrong, stop and report.
 > Work in worktree `<worktree>` on branch `<spec-branch>`. Commit there as Build It directs, each commit with `Refs #<ticket>`. Pushing, tracker writes and PRs belong to the orchestrator. If you stop to report, leave the working tree exactly as it stands. Write any ADR edit as a proposed amendment, marked as awaiting ratification.
-> **Planning route.** `context_builder` can't read a worktree-bound session (`workspace_authority_superseded`); use it only if it returns real source (more than a handful of files). Otherwise read every file the ticket touches, plus the tests and docs that govern it, with your own `read_file`, `file_search`, `get_code_structure` and Bash against this worktree. Try `manage_selection op=set` with those files, skipping it if it fails, then plan with `ask_oracle`, mode `plan`, in a new chat, pasting load-bearing excerpts if the selection failed. When the Oracle asks for more source, gather it and continue in the same chat; stop only if it can't see source you've selected. The plan is done when it maps every acceptance criterion to code and a test; then continue with Build It's Phase 3.
-> Read the notes issue's Run section for applicable gates. Done when the ticket's acceptance criteria are implemented, applicable gates pass, and the work is committed. Report commit SHAs, files changed, gate evidence, the planning route you used and any RepoPrompt tool that failed, and handoff notes: what later tickets need (patterns set, helpers added, gotchas).
+> Plan as Build It directs; the plan is done when it maps every acceptance criterion to code and a test.
+> **In-lane review.** Run Build It's Phase 4 review even on a trivial ticket, over the ticket's whole diff: publish it with `compare: "<start SHA>"` (the ticket's starting HEAD) and review it with `ask_oracle`, mode `review`, in a new chat, giving it the ticket's acceptance criteria and pasting the diff if publishing fails.
+> Read the notes issue's Run section for applicable gates. Done when the ticket's acceptance criteria are implemented, applicable gates pass, the work and its review fixes are committed, and the in-lane review has run, with every finding given a disposition: fixed, with its SHA, or declined, with the reason. Report commit SHAs, files changed, gate evidence, the review chat's ID with each finding and its disposition, and handoff notes: what later tickets need (patterns set, helpers added, gotchas).
 
 ### 3. Sanity pass
 
-Collect the child with a bounded wait. Check that its commits are on the branch, applicable gates are green under Phase 1's policy, and its file manifest matches the diff from the ticket's starting HEAD to the returned HEAD. Record the SHAs, files, gate evidence, planning route and handoff notes in the Ledger. Finish and commit the active ticket's work before another starts.
+Collect the child with a bounded wait. Check that its commits are on the branch, applicable gates are green under Phase 1's policy, its file manifest matches the diff from the ticket's starting HEAD to the returned HEAD, and it reports its in-lane review's chat ID, with every finding given a disposition. Record the SHAs in the ticket's Ledger row, the gate results in *Run*, and the manifest check, in-lane review and handoff notes in its Ledger note. Finish and commit the active ticket's work before another starts.
 
-**Repairs.** A sanity failure, or an unmet criterion from step 5, goes back to the same implementing child as a steer. One counter covers both: two repair attempts per ticket, each recorded before dispatch so a resume keeps the count. A planned TDD red, or a failure in the child's own throwaway tooling, is diagnosis and counts nothing. Every repaired result returns through steps 3–5. After a second failed repair, mark the ticket failed in the Ledger, comment its state on the ticket, and pause on it. Carry on outside its downstream subtree only while no run-owned change is uncommitted and the gates are green; otherwise preserve the work and pause for a disposition.
+**Repairs.** A sanity failure, accepted cold-review fixes from step 4, or an unmet criterion from step 6, goes back to the same implementing child as a steer. One counter covers all three: two repair attempts per ticket, each recorded before dispatch so a resume keeps the count. A planned TDD red, or a failure in the child's own throwaway tooling, is diagnosis and counts nothing. Every repaired result returns through steps 3–6. After a second failed repair, mark the ticket failed in the Ledger, comment its state on the ticket, and pause on it. Carry on outside its downstream subtree only while no run-owned change is uncommitted and the gates are green; otherwise preserve the work and pause for a disposition.
 
 **Child pauses.** Answer with `agent_run op=respond` when an advertised option fits the evidence and the overseer's brief. If none fits, keep the child paused and steer it with the needed instruction; a decision you can't settle becomes your own pause. Choose only an accurate option, even when a session is waiting.
 
-### 4. Push
+### 4. Cold review
+
+The in-lane review shares the implementer's context; a fresh session now reads the ticket's diff cold. Take the HEAD the sanity pass accepted as the reviewed HEAD, start the reviewer, record its session ID in the Ledger row, and collect it with a bounded wait:
+
+```json
+{"tool":"agent_run","args":{
+	"op":"start",
+	"model_id":"codexExec:gpt-6-astra-fast-xhigh",
+	"workflow_name":"Review",
+	"session_name":"SPEC #<spec> · Review #<ticket>",
+	"message":"Read ticket <ref> and spec <ref>. Independently review the diff from <start SHA> to <reviewed HEAD> on branch <spec-branch> in worktree <worktree> for correctness and compliance with the ticket. Review read-only, and keep your report outside the repo.",
+	"detach":true
+}}
+```
+
+Read `~/.agents/skills/apply-review/SKILL.md` and every file it points to, select orchestrated mode as Phase 4 §3 does, and triage the findings. Record the reviewed HEAD and each finding with its disposition in the Ledger note, then steer the accepted fixes to the implementing child as one repair (step 3), pointing at that note. Once the ticket has a reviewer, a repaired result returning here goes back to it, steered to re-check the changed behaviour and affected findings at the new head. A fix that would change a recorded decision or reopen a closed ticket is a pause.
+
+### 5. Push
 
 Push the spec branch before anything closes, so a closed ticket always points at commits on the remote.
 
-### 5. Cold verification closes the ticket
+### 6. Cold verification closes the ticket
 
 The user's standing permission, granted through the overseer, lets this verifier close a ticket once it passes. Collect it with a bounded wait.
 
@@ -113,21 +131,21 @@ The user's standing permission, granted through the overseer, lets this verifier
 	"op":"start",
 	"model_id":"engineer",
 	"session_name":"SPEC #<spec> · Triage #<ticket>",
-	"message":"Read `~/.agents/skills/triage/SKILL.md` and every file it points to, and follow its verification process. Read ticket <ref> and notes issue <ref>. Implementation at <head SHA> is committed and pushed on branch <spec-branch> in worktree <worktree>. Check every explicit acceptance criterion against the committed code at that commit, including criteria the baseline already appeared to meet, and link each to its evidence: the test that proves it, the code that implements it, or a command and its output. A green suite proves only what its tests assert. The notes issue's Run section records gate evidence by commit and environment: where it covers <head SHA> in an environment you can confirm matches, cite it instead of rerunning the broad gates. If every criterion passes, close the ticket with one comment: the per-criterion evidence, the ticket's commit SHAs, and the handoff notes from its Ledger entry. Otherwise leave it open and report each unmet criterion with its evidence."
+	"message":"Read `~/.agents/skills/triage/SKILL.md` and every file it points to, and follow its verification process. Read ticket <ref> and notes issue <ref>. Implementation at <head SHA> is committed and pushed on branch <spec-branch> in worktree <worktree>. Check every explicit acceptance criterion against the committed code at that commit, including criteria the baseline already appeared to meet, and link each to its evidence: the test that proves it, the code that implements it, or a command and its output. A green suite proves only what its tests assert. The notes issue's Run section records gate evidence by commit and environment: where it covers <head SHA> in an environment you can confirm matches, cite it instead of rerunning the broad gates. If every criterion passes, close the ticket with one comment: the per-criterion evidence, the ticket's commit SHAs, and the handoff notes from its Ledger note. Otherwise leave it open and report each unmet criterion with its evidence."
 }}
 ```
 
 That closing comment is the ticket's one handoff comment. Unmet criteria go to step 3's repairs. The sanity pass checks mechanics; the verifier judges acceptance.
 
-### 6. Bookkeeping
+### 7. Bookkeeping
 
-Rewrite the ticket's Ledger row. For each ticket this closure fully unblocks, swap the blocked label for the agent-ready one, or the human-ready one on a human ticket. Keep every child session: the overseer's retro reads them, then the overseer retires them. Then recompute the frontier.
+Rewrite the ticket's Ledger row, linking its status to the closing comment. For each ticket this closure fully unblocks, swap the blocked label for the agent-ready one, or the human-ready one on a human ticket. Keep every child session: the overseer's retro reads them, then the overseer retires them. Then recompute the frontier.
 
-**Done when** every ticket other than the acceptance tickets is closed, with code commits pushed and human completion confirmed on the tracker. Failed or blocked work leaves the run interrupted pending a decision. The spec body changes only by the user's hand: a scope change is a pause, and close-out waits for the updated spec and graph, so the PR claims only what the spec now asks.
+**Done when** every ticket other than the acceptance tickets is closed, each code ticket with both reviews recorded (a stalled one as unavailable) and its commits pushed, and human completion confirmed on the tracker. Failed or blocked work leaves the run interrupted pending a decision. The spec body changes only by the user's hand: a scope change is a pause, and close-out waits for the updated spec and graph, so the PR claims only what the spec now asks.
 
 ## Phase 4: Close-out
 
-Review twice before opening the PR: first the whole branch, then a cold `code-review`. This phase is that rule's home.
+Review twice more before opening the PR, now across tickets: first the whole branch, then a cold `code-review`. This phase is that rule's home.
 
 1. **Integrate.** Run the final integration gates, refresh the remote default ref, and record the review base (the merge-base with `origin/<default>`) and head SHAs.
 2. **First review: the whole branch.** A fresh reader catches cross-ticket drift. Give it the exact range and the spec as pointers, and collect it with a bounded wait:
@@ -143,7 +161,7 @@ Review twice before opening the PR: first the whole branch, then a cold `code-re
 }}
 ```
 
-3. **Triage and fix.** Read `~/.agents/skills/apply-review/SKILL.md` and every file it points to, and select orchestrated mode. Resolve unclear findings by steering the reviewer, and weigh conflicts with recorded decisions by that skill's evidence rule. Apply accepted fixes: narrow agents for behavioural or multi-file changes, direct edits for mechanical ones. Verify under Phase 1's gate policy, call the Skill tool with `commit-me`, and record the fixes in a **Review fixes** Ledger row with SHAs, files and validation evidence. Have the reviewer re-check changed behaviour and affected findings at the new head. A fix that would change a recorded decision or reopen a closed ticket is a pause.
+3. **Triage and fix.** Read `~/.agents/skills/apply-review/SKILL.md` and every file it points to, and select orchestrated mode. Resolve unclear findings by steering the reviewer, and weigh conflicts with recorded decisions by that skill's evidence rule. Apply accepted fixes: narrow agents for behavioural or multi-file changes, direct edits for mechanical ones. Verify under Phase 1's gate policy, call the Skill tool with `commit-me`, and record the fixes in a **Review fixes** Ledger row with their SHAs and one pointer to the validation evidence. Have the reviewer re-check changed behaviour and affected findings at the new head. A fix that would change a recorded decision or reopen a closed ticket is a pause.
 4. **Second review: cold `code-review`.** Start two fresh sessions, one per axis (`· Standards`, `· Spec`), so neither depends on a sub-agent of its own. Give each only the branch, `origin/<default>` as the fixed point, and the spec plus any parent spec it implements (e.g. a capability spec):
 
    > Call the Skill tool with `code-review`; if the tool can't load it, read `~/.agents/skills/code-review/SKILL.md` and every file it points to, and follow them. Review branch <spec-branch> in worktree <worktree> against the fixed point `origin/<default>`; the spec is <ref> (parent spec: <ref>). Run only the **<axis>** axis: do the skill's steps 1–3, then carry out that axis's sub-agent brief yourself, in this session. Report its findings and what you accessed.
@@ -154,7 +172,7 @@ Review twice before opening the PR: first the whole branch, then a cold `code-re
 5. **Reconcile and push.** Push, then match every commit in the PR range one to one against the Ledger and Review fixes rows. Investigate unexplained commits, and pause if ownership can't be established. Confirm the final reviewed head is the pushed head.
 6. **Open the PR.** Call the Skill tool with `deploy-check` on the range and put its verdict in the PR body. While CI can't run, the local gates in the overseer's brief stand in: run them on the exact head and record the commands, results and head SHA in the body. Then call the Skill tool with `draft-pr` and take its draft-and-open branch; this workflow instructs opening the PR. Reuse an existing PR for this branch on resume.
    - The body references each ticket with `Refs #<ticket>`. It uses `Closes #<spec>` only when nothing on the spec remains after merge; otherwise `Refs #<spec>`, listing the post-merge steps (deploy-dependent records, acceptance after deploy).
-   - It carries both reviews' findings with their dispositions and coverage, and the decisions made under the overseer's delegation, for the user's veto.
+   - It carries both reviews' findings with their dispositions and coverage, the per-ticket reviews' held findings and any marked unavailable, and the decisions made under the overseer's delegation, for the user's veto.
    - Wait until GitHub lists the PR's checks and linked issues before reading them.
 7. **Acceptance tickets.** Pause for each one on the pushed PR head, with the fixtures and recipes its criteria ask for. A later fix changes the head: rerun the affected checks, push, and ask again.
 8. **Rollup and caveats.** Comment a short rollup on the spec: the PR link, failed or deferred work, and *proposed* spec-body edits (Out of Scope candidates included) for the user. Then settle the repo's caveats ledger (create it if missing: `gh issue create --label caveats --title "Known caveats"`): append each environment quirk this run diagnosed with its symptom, repro command, expected signature and date, and prune entries whose quirk didn't reproduce when its gate ran.
@@ -175,7 +193,7 @@ A stop comes from the user, or from the overseer relaying them. Abort is a first
 
 The one list of pause triggers:
 
-- A gate check still failing after two repair attempts (Phase 3 §3).
+- A ticket still failing its sanity pass, cold review or verification after two repair attempts (Phase 3 §3).
 - A choice between behaviours that the spec, the code and the overseer's brief leave open: acceptance criteria, seams, product or architecture.
 - Any edit to the spec: a graph repair, a scope change.
 - A worktree that doesn't match the overseer's brief.
