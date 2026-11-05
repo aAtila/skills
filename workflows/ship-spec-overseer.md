@@ -10,7 +10,7 @@ description: "Ship a spec's ticket graph as one PR when an overseer session over
 
 Spec reference: $ARGUMENTS
 
-You orchestrate one spec: a tracker issue whose tickets form a **task graph** with blocking edges. Your job is coordination: fetch the graph, walk it, dispatch Build It children, review and verify each ticket, review the whole branch, and open one PR. Around the run, the overseer owns the worktree, landing, the retro and retiring sessions.
+You orchestrate one spec, a tracker issue whose tickets form a **task graph** with blocking edges, and ship it as one PR. The overseer owns the worktree, landing, the retro and retiring sessions.
 
 Six words carry this workflow:
 
@@ -27,12 +27,12 @@ The overseer names this session `SPEC #<spec>: <short title>`; if the name diffe
 
 ## Phase 1: Intake
 
-Tracker commands come from the *Tracker adapter* at the end; resolve the tracker first (`git remote get-url origin`).
+Tracker commands come from the *Tracker adapter* at the end.
 
 1. **Fetch the spec and its tickets.** For each ticket, read state, labels, acceptance criteria and blocking edges. Tickets labelled `HITL` or `ready-for-human` are **human tickets**: they gate the graph like any other, and the user works them. A human ticket that accepts the integrated result (blocked by every code ticket, or with criteria that test the whole spec) is an **acceptance ticket**, worked in Phase 4 on the final head.
-2. **Validate the graph.** Every blocking edge resolves to a ticket in the spec, the graph has no cycles, and no ticket is a *release point* (see *Pauses*). Investigate malformed references; a repair that edits the spec is a pause, since the spec is the user's.
+2. **Validate the graph.** Every blocking edge resolves to a ticket in the spec, the graph has no cycles, and no ticket is a *release point* (see *Pauses*). Investigate malformed references; repairing the spec is a pause.
 3. **Resume check.** Read the notes issue if one is linked. A `complete` run reports its PR to the overseer and stops. An `active` or `interrupted` run recovers the branch, baseline, gates, Ledger and decisions with their sources; a current instruction from the user, direct or quoted by the overseer, outranks the recorded ones. Recorded commits for closed code tickets must be reachable on the remote spec branch; human tickets use their recorded tracker evidence. Investigate discrepancies; pause on one you can't resolve, or on a baseline or ownership fact you can't recover. Recover the active ticket and its child first, and finish steps 4–5 before any dispatch.
-4. **Adopt the worktree.** The overseer created it, bound this session to it, and names it with the branch in its brief. Refresh the remote default and spec refs, then check that `git op=status` shows that branch with a clean tree, and that every commit above its merge-base with the remote default belongs to this spec or its Ledger. Record the worktree path, branch, base SHA and baseline HEAD. A missing worktree, a wrong branch, a dirty tree or an unexplained commit is a pause; the overseer fixes the checkout. If pushing needs the user's direct consent (sandbox or auto-review), ask once now, for this branch and every later push to it, and record the consent in *Run*.
+4. **Adopt the worktree** the overseer's brief names. Refresh the remote default and spec refs, then check that `git op=status` shows that branch with a clean tree, and that every commit above its merge-base with the remote default belongs to this spec or its Ledger. Record the worktree path, branch, base SHA and baseline HEAD. A missing worktree, a wrong branch, a dirty tree or an unexplained commit is a pause; the overseer fixes the checkout. If pushing needs the user's direct consent (sandbox or auto-review), ask once now, for this branch and every later push to it, and record the consent in *Run*.
 5. **Baseline and gates.** Take the gate commands, any shared-database lock and the CI stand-in from the overseer's brief, and keep the original baseline on resume. The brief names two gate sets: the **fast gate** (the repo's fast checks plus the tests covering the changed area) and the **full gate** (every gate the repo requires); a brief naming only one is a pause. Record each gate's set and scope (per ticket or final integration) and any unavailable service, with evidence. Read the repo's `caveats` issue if one exists: its entries are checkable claims, and an exemption needs a matching failure signature, suites and count included. Record the blocked, agent-ready and human-ready label names from the repo's triage-label doc (e.g. `docs/agents/triage-labels.md`). **Green** means every applicable gate passes except evidenced baseline exceptions. Record each result with commit SHA, command, environment and outcome, and reuse it only while the tested content (uncommitted changes included) and the environment still match. **Gate cadence:** a ticket's build and its repairs run the fast gate. The full gate runs once per ticket, on its final head after the cold review settles and before the verifier (Phase 3 §5), so it covers the head the verifier checks; a repair that changes that head reruns it. Close-out review fixes follow the same cadence, with the full gate on the final reviewed head (Phase 4 §5). CI on the PR stays the final gate. A newly failing gate needs diagnosis, never a new exemption.
 
 **Done when** the graph validates, the ticket table is complete, and the worktree, baseline, gates, label names and push consent are recorded. On resume, persist the refreshed metadata, repair missing shared context through Phase 2, then continue from the recorded phase.
@@ -51,7 +51,7 @@ Tracker commands come from the *Tracker adapter* at the end; resolve the tracker
 ```
 
 2. **Decide TDD per ticket.** A ticket delivering testable behaviour (logic, API, data flow) is a **TDD ticket** and needs a seam. Config, tooling, docs and pure visual polish are exempt.
-3. **Confirm the seams** against the tickets and code, and fix what's wrong. Settle later child objections the same way, updating the table before steering the child. A seam that hinges on a product or architecture choice the spec leaves open is a pause: the overseer answers under its delegation or asks the user.
+3. **Confirm the seams** against the tickets and code, and fix what's wrong. Settle later child objections the same way, updating the table before steering the child. A seam that hinges on a product or architecture choice the spec leaves open is a pause.
 4. **Create or update the notes issue,** linked from the spec, with these sections:
    - *Run*: state (`active`, `interrupted`, `complete`), phase, active ticket and session, worktree, branch, base SHA, baseline and exclusions, push consent, label names, gate inventory and result evidence, PR URL, and this run's IDs as separate fields: CE session ID, provider session or rollout ID, workspace ID, tab ID.
    - *Research notes*: the explore output.
@@ -73,7 +73,7 @@ Query the tracker, then exclude failed tickets and their downstream subtrees unt
 
 **Human tickets:** when one enters the frontier, send the overseer a notice so the user can work it, and keep dispatching; acceptance tickets wait for Phase 4. When the frontier holds only human tickets, or is empty while human tickets remain open, pause; once the user reports one done, confirm it closed on the tracker before recomputing. An empty frontier with open tickets means the graph is stuck: pause, naming the blocked subtree.
 
-**Parallel group:** frontier tickets with disjoint files touched, no shared stateful resource, and no pattern one would set for another (serial tickets reuse the first one's patterns; parallel ones invent their own). Pause once to propose the group; on yes, the overseer creates and claims a worktree per ticket. Each child commits on `spec/<n>-<slug>/<ticket>` in its worktree, and its cold review (§4) runs on that branch. Integrate those branches into the spec branch one at a time, in frontier order: have the ticket's cold reviewer re-check any conflict resolution, then run the full gate on the integrated head (that ticket's §5 run), push, verify and close. Suites on a shared resource run only on the integrated spec branch, so a parallel child's fast gate leaves them to that full run. Integration conflicts are yours to resolve.
+**Parallel group:** frontier tickets with disjoint files touched, no shared stateful resource, and no pattern one would set for another. Pause once to propose the group; on yes, the overseer creates and claims a worktree per ticket. Each child commits on `spec/<n>-<slug>/<ticket>` in its worktree, and its cold review (§4) runs on that branch. Integrate those branches into the spec branch one at a time, in frontier order: have the ticket's cold reviewer re-check any conflict resolution, then run the full gate on the integrated head (that ticket's §5 run), push, verify and close. Suites on a shared resource run only on the integrated spec branch, so a parallel child's fast gate leaves them to that full run. Integration conflicts are yours to resolve.
 
 ### 2. Dispatch a Build It child
 
@@ -91,11 +91,11 @@ The brief is pointers plus the envelope:
 > Work in worktree `<worktree>` on branch `<spec-branch>`. Commit there as Build It directs, each commit with `Refs #<ticket>`. Pushing, tracker writes and PRs belong to the orchestrator. If you stop to report, leave the working tree exactly as it stands. Write any ADR edit as a proposed amendment, marked as awaiting ratification.
 > Plan as Build It directs; the plan is done when it maps every acceptance criterion to code and a test.
 > **In-lane review.** Run Build It's Phase 4 review even on a trivial ticket, over the ticket's whole diff: publish it with `compare: "<start SHA>"` (the ticket's starting HEAD) and review it with `ask_oracle`, mode `review`, in a new chat, giving it the ticket's acceptance criteria and pasting the diff if publishing fails.
-> Read the notes issue's Run section for the gates. Through your build and any repairs, run the fast gate: the repo's fast checks plus the tests covering what you changed. The orchestrator runs the full gate once, on the ticket's settled head. Done when the ticket's acceptance criteria are implemented, the fast gate passes, the work and its review fixes are committed, and the in-lane review has run, with every finding given a disposition: fixed, with its SHA, or declined, with the reason. Report commit SHAs, files changed, gate evidence, the review chat's ID with each finding and its disposition, and handoff notes: what later tickets need (patterns set, helpers added, gotchas).
+> Read the notes issue's Run section for the gates. Through your build and any repairs, run the fast gate: the repo's fast checks plus the tests covering what you changed. The orchestrator runs the full gate once, on the ticket's settled head. Done when the ticket's acceptance criteria are implemented, the fast gate passes, the work and its review fixes are committed, and the in-lane review has run, with every finding given a disposition: fixed, with its SHA, or declined, with the reason. Report commit SHAs, files changed, gate evidence, the review chat's ID and dispositions, and handoff notes: what later tickets need (patterns set, helpers added, gotchas).
 
 ### 3. Sanity pass
 
-Collect the child with a bounded wait. Check that its commits are on the branch, the fast gate is green at the returned HEAD under Phase 1's policy, its file manifest matches the diff from the ticket's starting HEAD to the returned HEAD, and it reports its in-lane review's chat ID, with every finding given a disposition. Record the SHAs in the ticket's Ledger row, the gate results in *Run*, and the manifest check, in-lane review and handoff notes in its Ledger note. Finish and commit the active ticket's work before another starts.
+Collect the child with a bounded wait. Check that its commits are on the branch, the fast gate is green at the returned HEAD under Phase 1's policy, its file manifest matches the diff from the ticket's starting HEAD to the returned HEAD, and it reports its in-lane review's chat ID, with every finding given a disposition. Record the SHAs in the ticket's Ledger row, the gate results in *Run*, and the manifest check, in-lane review and handoff notes in its Ledger note.
 
 **Repairs.** A sanity failure, accepted cold-review fixes from step 4, a full-gate failure from step 5, or an unmet criterion from step 6, goes back to the same implementing child as a steer that has it run the fast gate. One counter covers all four: two repair attempts per ticket, each recorded before dispatch so a resume keeps the count. A planned TDD red, or a failure in the child's own throwaway tooling, is diagnosis and counts nothing. Every repaired result returns through steps 3–6. After a second failed repair, mark the ticket failed in the Ledger, comment its state on the ticket, and pause on it. Carry on outside its downstream subtree only while no run-owned change is uncommitted and the gates are green; otherwise preserve the work and pause for a disposition.
 
@@ -116,7 +116,7 @@ The in-lane review shares the implementer's context; a fresh session now reads t
 }}
 ```
 
-Read `~/.agents/skills/apply-review/SKILL.md` and every file it points to, select orchestrated mode as Phase 4 §3 does, and triage the findings. Record the reviewed HEAD and each finding with its disposition in the Ledger note, then steer the accepted fixes to the implementing child as one repair (step 3), pointing at that note. **One re-check round.** After the cold review, the next repaired result to reach this step goes back to its reviewer, steered to re-check the changed behaviour and affected findings at the new head. An accepted finding still unfixed there goes back as a repair. A new finding from the re-check blocks the ticket only if it loses, corrupts or exposes data, attributes a write to the wrong person, or makes a wrong write to an external system or to a customer; record any other in the Ledger note as **carried**, for the Phase 4 whole-branch review. Later repaired results go straight to step 5: the full gate and the verifier check them, and Phase 4 reviews them. The overseer's brief can lift the cap for a spec (e.g. money, privacy, a hard-to-reverse migration); then every repaired result is re-checked and every new finding triaged. A fix that would change a recorded decision or reopen a closed ticket is a pause.
+Read `~/.agents/skills/apply-review/SKILL.md` and every file it points to, select orchestrated mode as Phase 4 §3 does, and triage the findings. Record the reviewed HEAD and each finding with its disposition in the Ledger note, then steer the accepted fixes to the implementing child as one repair (step 3), pointing at that note. **One re-check round.** After the cold review, the next repaired result to reach this step goes back to its reviewer, steered to re-check the changed behaviour and affected findings at the new head. An accepted finding still unfixed there goes back as a repair. A new finding from the re-check blocks the ticket only if it loses, corrupts or exposes data, attributes a write to the wrong person, or makes a wrong write to an external system or to a customer; record any other in the Ledger note as **carried**, for the Phase 4 whole-branch review. Later repaired results skip the reviewer; Phase 4 reviews them. The overseer's brief can lift the cap for a spec (e.g. money, privacy, a hard-to-reverse migration); then every repaired result is re-checked and every new finding triaged.
 
 ### 5. Full gate and push
 
@@ -135,20 +135,18 @@ The user's standing permission, granted through the overseer, lets this verifier
 }}
 ```
 
-That closing comment is the ticket's one handoff comment. Unmet criteria go to step 3's repairs. The sanity pass checks mechanics; the verifier judges acceptance.
+That closing comment is the ticket's one handoff comment.
 
 ### 7. Bookkeeping
 
 Rewrite the ticket's Ledger row, linking its status to the closing comment. For each ticket this closure fully unblocks, swap the blocked label for the agent-ready one, or the human-ready one on a human ticket. Keep every child session: the overseer's retro reads them, then the overseer retires them. Then recompute the frontier.
 
-**Done when** every ticket other than the acceptance tickets is closed, each code ticket with both reviews recorded (a stalled one as unavailable) and its commits pushed, and human completion confirmed on the tracker. Failed or blocked work leaves the run interrupted pending a decision. The spec body changes only by the user's hand: a scope change is a pause, and close-out waits for the updated spec and graph, so the PR claims only what the spec now asks.
+**Done when** every ticket other than the acceptance tickets is closed, each code ticket with both reviews recorded (a stalled one as unavailable) and its commits pushed, and human completion confirmed on the tracker. Failed or blocked work leaves the run interrupted pending a decision. After a scope change, close-out waits for the updated spec and graph, so the PR claims only what the spec now asks.
 
 ## Phase 4: Close-out
 
-Review twice more before opening the PR, now across tickets: first the whole branch, then a cold `code-review`. This phase is that rule's home.
-
 1. **Integrate.** Run the final integration gates, refresh the remote default ref, and record the review base (the merge-base with `origin/<default>`) and head SHAs.
-2. **First review: the whole branch.** A fresh reader catches cross-ticket drift. Give it the exact range and the spec as pointers, and collect it with a bounded wait:
+2. **First review: the whole branch.** A fresh reader catches cross-ticket drift. Collect it with a bounded wait:
 
 ```json
 {"tool":"agent_run","args":{
@@ -161,8 +159,8 @@ Review twice more before opening the PR, now across tickets: first the whole bra
 }}
 ```
 
-3. **Triage and fix.** Read `~/.agents/skills/apply-review/SKILL.md` and every file it points to, and select orchestrated mode. Resolve unclear findings by steering the reviewer, and weigh conflicts with recorded decisions by that skill's evidence rule. Apply accepted fixes: narrow agents for behavioural or multi-file changes, direct edits for mechanical ones. Verify with the fast gate, call the Skill tool with `commit-me`, and record the fixes in a **Review fixes** Ledger row with their SHAs and one pointer to the validation evidence. Have the reviewer re-check changed behaviour and affected findings at the new head. A fix that would change a recorded decision or reopen a closed ticket is a pause.
-4. **Second review: cold `code-review`.** Start two fresh sessions, one per axis (`· Standards`, `· Spec`), so neither depends on a sub-agent of its own. Give each only the branch, `origin/<default>` as the fixed point, and the spec plus any parent spec it implements (e.g. a capability spec):
+3. **Triage and fix.** Read `~/.agents/skills/apply-review/SKILL.md` and every file it points to, and select orchestrated mode. Resolve unclear findings by steering the reviewer, and weigh conflicts with recorded decisions by that skill's evidence rule. Apply accepted fixes: narrow agents for behavioural or multi-file changes, direct edits for mechanical ones. Verify with the fast gate, call the Skill tool with `commit-me`, and record the fixes in a **Review fixes** Ledger row with their SHAs and one pointer to the validation evidence. Have the reviewer re-check changed behaviour and affected findings at the new head.
+4. **Second review: cold `code-review`.** Start two fresh sessions, one per axis (`· Standards`, `· Spec`), so neither depends on a sub-agent of its own, and give each only this brief:
 
    > Call the Skill tool with `code-review`; if the tool can't load it, read `~/.agents/skills/code-review/SKILL.md` and every file it points to, and follow them. Review branch <spec-branch> in worktree <worktree> against the fixed point `origin/<default>`; the spec is <ref> (parent spec: <ref>). Run only the **<axis>** axis: do the skill's steps 1–3, then carry out that axis's sub-agent brief yourself, in this session. Report its findings and what you accessed.
 
@@ -178,11 +176,11 @@ Review twice more before opening the PR, now across tickets: first the whole bra
 8. **Rollup and caveats.** Comment a short rollup on the spec: the PR link, failed or deferred work, and *proposed* spec-body edits (Out of Scope candidates included) for the user. Then settle the repo's caveats ledger (create it if missing: `gh issue create --label caveats --title "Known caveats"`): append each environment quirk this run diagnosed with its symptom, repro command, expected signature and date, and prune entries whose quirk didn't reproduce when its gate ran.
 9. **Hand back.** Set *Run* to `complete` with the PR URL and final head, leaving the notes issue open for the overseer's retro. Report to the overseer: the PR URL, head and gate evidence, both reviews' findings and coverage (naming any portion marked unavailable) and what you did with each, the pauses and their answers, and anything refused or deferred.
 
-**Done when** the PR is open at the final reviewed and pushed head, the rollup is posted, *Run* reads `complete`, and the overseer has your report. Landing, the retro and retiring the sessions follow the run; all three are the overseer's.
+**Done when** the PR is open at the final reviewed and pushed head, the rollup is posted, *Run* reads `complete`, and the overseer has your report.
 
 ## If the run is stopped
 
-A stop comes from the user, or from the overseer relaying them. Abort is a first-class exit:
+A stop comes from the user, or from the overseer relaying them:
 
 1. Cancel running children (`agent_run op=cancel`).
 2. Compare the worktree against the Phase 1 baseline, exclusions and Ledger, counting the active child's uncommitted changes as this run's.
@@ -190,8 +188,6 @@ A stop comes from the user, or from the overseer relaying them. Abort is a first
 4. Set *Run* to `interrupted` with the phase, active ticket, repair count and uncommitted work, and leave the notes issue open. Stopped before the notes issue exists: report that state to the overseer directly.
 
 ## Pauses
-
-The one list of pause triggers:
 
 - A ticket still failing its sanity pass, full gate, cold review or verification after two repair attempts (Phase 3 §3).
 - A choice between behaviours that the spec, the code and the overseer's brief leave open: acceptance criteria, seams, product or architecture.
@@ -219,5 +215,3 @@ Resolve the tracker once from `git remote get-url origin` (github.com → GitHub
 | Create / edit notes issue | `gh issue create` / `gh issue edit <n> --body-file` | `glab issue create` / `glab issue update <n> --description` |
 | Comment | `gh issue comment` | `glab issue note` |
 | Open PR | `gh pr create --title … --body "<Closes\|Refs> #<spec> …"` (Phase 4 §6) | `glab mr create --title … --description "<Closes\|Refs> #<spec> …"` |
-
-On either tracker, a `Blocked by:` body section is the fallback when native data is missing; specs written by `to-tickets` carry it by construction.
